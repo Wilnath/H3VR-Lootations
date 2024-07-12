@@ -56,6 +56,7 @@ namespace Lootations
         private SpawnParameters GetSpawnParameters()
         {
             SpawnParameters parameters = new SpawnParameters();
+            // TODO: IFF?
             if (SR_Manager.instance.isActiveAndEnabled)
             {
                 FactionLevel currentLevel = SR_Manager.GetFactionLevel();

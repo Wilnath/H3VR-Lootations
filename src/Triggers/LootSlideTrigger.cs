@@ -7,12 +7,19 @@ namespace Lootations
     {
         public GameObject LootObjectOwner;
         public GameObject Root;
+        public GameObject Hinge;
         public float MaxOffset = 0.25f;
 
         public event ILootTrigger.OnTriggeredDelegate OnTriggered;
 
         public override void Awake()
         {
+            if (Root == null || Hinge == null)
+            {
+                Lootations.Logger.LogError("SlideTrigger doesn't have a root or hinge, this is misconfigured!");
+                gameObject.SetActive(false);
+                return;
+            }
             LootObject.Hook(LootObjectOwner, this);
         }
 
@@ -25,15 +32,14 @@ namespace Lootations
         public override void UpdateInteraction(FVRViveHand hand)
         {
             base.UpdateInteraction(hand);
-            Vector3 vec = Root.transform.position - hand.Input.Pos;
-            Vector3 proj = Vector3.Project(vec, Root.transform.forward);
-            float offset = Mathf.Clamp(proj.z, 0, MaxOffset);
-            transform.localPosition = new Vector3(0, 0, offset);
+            Vector3 vec = Root.transform.InverseTransformPoint(hand.Input.Pos);
+            float offset = Mathf.Clamp(vec.z, 0, MaxOffset);
+            Hinge.transform.localPosition = new Vector3(0, 0, offset);
         }
 
-        public void Reset()
+        public void LootReset()
         {
-            transform.localPosition = new Vector3(0, 0, 0);
+            Hinge.transform.localPosition = new Vector3(0, 0, 0);
         }
 
         void OnDrawGizmos()

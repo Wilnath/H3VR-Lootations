@@ -32,7 +32,7 @@ namespace Lootations
             GetComponent<AudioSource>()?.Play();
         }
 
-        public void Reset()
+        public void LootReset()
         {
         }
     }

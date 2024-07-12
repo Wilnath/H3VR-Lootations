@@ -17,7 +17,6 @@ namespace Lootations
             LootObject.Hook(LootObjectOwner, this);
         }
 
-        // TODO: This is weird, and does not port to tnh
         private void OnTriggerEnter(Collider other)
         {
             WW_Keycard cardComponent = other.GetComponent<WW_Keycard>();
@@ -35,7 +34,7 @@ namespace Lootations
             Gizmos.color = new Color(0.0f, 0.6f, 0.0f, 0.5f);
         }
 
-        public void Reset()
+        public void LootReset()
         {
         }
     }

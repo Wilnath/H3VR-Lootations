@@ -36,14 +36,25 @@ namespace Lootations
 
         private readonly static float CULL_MIN_TIMER = 0.5f;
         private readonly static float CULL_RANDOM_DELAY_MAX = 2.5f;
-        private readonly static float CULL_GRACE_DISTANCE = 0.5f;
         private Coroutine CullUpdateRoutine;
 
         private void Awake()
         {
             bool active = LootManager.AddLootable(this);
             gameObject.SetActive(active);
-            CullUpdateRoutine = StartCoroutine(CullUpdate());
+            if (Lootations.CullingEnabled.Value)
+            {
+                CullUpdateRoutine = StartCoroutine(CullUpdate());
+                if (UseInstanceSettings)
+                {
+                    cullDistance = CullDistance;
+                }
+                else
+                {
+                    cullDistance = Lootations.ItemCullingDistance.Value;
+                }
+            }
+
             if (SR_Manager.instance != null)
             {
                 SetLevel(SR_Manager.instance.CurrentCaptures);
@@ -53,14 +64,6 @@ namespace Lootations
                 SetLevel(0);
             }
 
-            if (UseInstanceSettings)
-            {
-                cullDistance = CullDistance;
-            }
-            else
-            {
-                cullDistance = Lootations.ItemCullingDistance.Value;
-            }
         }
         
         IEnumerator CullUpdate()
@@ -71,7 +74,7 @@ namespace Lootations
                 {
                     if (Culled)
                     {
-                        if (Utilities.PlayerWithinDistance(transform.position, cullDistance - CULL_GRACE_DISTANCE))
+                        if (Utilities.PlayerWithinDistance(transform.position, cullDistance))
                         {
                             foreach (GameObject go in spawnedLoot) 
                             {
@@ -82,7 +85,7 @@ namespace Lootations
                     }
                     else
                     {
-                        if (!Utilities.PlayerWithinDistance(transform.position, cullDistance + CULL_GRACE_DISTANCE))
+                        if (!Utilities.PlayerWithinDistance(transform.position, cullDistance))
                         {
                             foreach (GameObject go in spawnedLoot) 
                             {

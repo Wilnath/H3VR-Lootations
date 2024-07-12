@@ -11,7 +11,7 @@ namespace Lootations
 {
     internal static class Utilities
     {
-        public static LootSpawnPoint[] gameObjectsToPoints(GameObject[] gameObjects)
+        public static LootSpawnPoint[] GameObjectsToPoints(GameObject[] gameObjects)
         {
             if (gameObjects.Length == 0)
                 return [];

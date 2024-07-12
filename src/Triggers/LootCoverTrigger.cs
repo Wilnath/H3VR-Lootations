@@ -20,6 +20,12 @@ namespace Lootations
         {
             base.Awake();
             startAngle = Hinge.transform.localEulerAngles.z;
+            if (Root == null || Hinge == null)
+            {
+                Lootations.Logger.LogError("CoverTrigger doesn't have a root or hinge, this is misconfigured!");
+                gameObject.SetActive(false);
+                return;
+            }
             LootObject.Hook(LootObjectOwner, this);
         }
 
@@ -39,7 +45,7 @@ namespace Lootations
             Hinge.transform.localEulerAngles = new Vector3(0, 0, angle);
         }
 
-        public void Reset()
+        public void LootReset()
         {
             // Reset rotation.
             Hinge.transform.localEulerAngles = new Vector3(0, 0, startAngle);

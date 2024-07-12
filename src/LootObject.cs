@@ -44,7 +44,7 @@ namespace Lootations
             if (trigger is ILootTrigger) 
             {
                 ILootTrigger lootTrigger = trigger as ILootTrigger;
-                lootObject.OnTriggerReset += lootTrigger.Reset;
+                lootObject.OnTriggerReset += lootTrigger.LootReset;
                 lootTrigger.OnTriggered += lootObject.Trigger;
             }
         }
@@ -55,7 +55,7 @@ namespace Lootations
             {
                 Lootations.Logger.LogWarning("LootTrigger skipped initialization due to missing loot points.");
             }
-            spawnPoints = Utilities.gameObjectsToPoints(LootSpawnPoints);
+            spawnPoints = Utilities.GameObjectsToPoints(LootSpawnPoints);
             LootManager.AddTrigger(this);
         }
 

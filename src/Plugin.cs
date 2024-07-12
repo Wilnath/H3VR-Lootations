@@ -18,6 +18,7 @@ namespace Lootations
         public static ConfigEntry<float> ItemCullingDistance;
         public static ConfigEntry<float> SosigSpawnDistance;
         public static ConfigEntry<float> SosigDeSpawnDistance;
+        public static ConfigEntry<bool> CullingEnabled;
 
         private static Harmony harmonyInstance;
         
@@ -30,8 +31,6 @@ namespace Lootations
 
             TableManager.Initialize();
             h3mpEnabled = Chainloader.PluginInfos.ContainsKey("VIP.TommySoucy.H3MP");
-            // Your plugin's ID, Name, and Version are available here.
-            Logger.LogMessage($"{Id} {Name} {Version} Awakened");
 
             SetupConfig();
         }
@@ -42,10 +41,12 @@ namespace Lootations
 
         private void SetupConfig()
         {
-            ItemCullingDistance = Config.Bind("Performance", "ItemCullingDistance", 50f, "The distance at which items are set to be inactive.");
             SosigSpawnDistance = Config.Bind("Performance", "SosigSpawnDistance", 75f, "How far away you have to be for sausages to spawn in.");
             SosigDeSpawnDistance = Config.Bind("Performance", "SosigDeSpawnDistance", 150f, "TODO");
             ProximitySpawnDistance = Config.Bind("Performance", "ProximitySpawnDistance", 50f, "Distance until Proximity triggers activate, can be expensive if too far.\nNote: Some proximity triggers override this setting.");
+
+            CullingEnabled = Config.Bind("Experimental", "Culling", true, "If untouched items are to be disabled after player is set distance away from the loot spawn point.");
+            ItemCullingDistance = Config.Bind("Experimental", "ItemCullingDistance", 50f, "The distance at which items are set to be inactive.");
         }
     }
 }

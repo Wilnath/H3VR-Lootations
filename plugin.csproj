@@ -1,12 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <!-- Plugin name, version, etc. -->
-    <!-- TODO: Change these values! -->
     <PropertyGroup>
         <AssemblyName>Wilnath.Lootations</AssemblyName>
+        <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
         <Version>1.0.0</Version>
-        <Authors>marbL</Authors>
+        <Authors>Wilnath/marbL-</Authors>
         <AssemblyTitle>Lootations</AssemblyTitle>
-        <Description>Sample BepInEx plugin template for H3VR!</Description>
+        <Description>Library for building containers of randomized items in H3VR.</Description>
         <PackageProjectUrl>https://github.com/H3VR-Modding/H3VRPluginTemplate</PackageProjectUrl>
         <Configurations>Debug;Release;test</Configurations>
     </PropertyGroup>
@@ -32,6 +31,7 @@
         <DebugType>full</DebugType>
     </PropertyGroup>
 
+
     <!-- Project references -->
     <ItemGroup>
         <!-- Required to compile .NET Framerowk 3.5 libraries -->
@@ -50,7 +50,7 @@
         <!-- References to Unity, BepInEx, and the publicized H3 libraries -->
         <PackageReference Include="UnityEngine" Version="5.6.1" />
         <PackageReference Include="BepInEx.Core" Version="5.4.17" />
-        <PackageReference Include="H3VR.GameLibs" Version="0.111.5" />
+        <PackageReference Include="H3VR.GameLibs" Version="0.113.4" />
     </ItemGroup>
     <ItemGroup>
       <Reference Include="H3MP">

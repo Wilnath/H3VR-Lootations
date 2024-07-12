@@ -34,7 +34,7 @@ namespace Lootations
             }
         }
 
-        public void Reset()
+        public void LootReset()
         {
             // TODO
             return;

@@ -10,6 +10,6 @@ namespace Lootations
     {
         public delegate void OnTriggeredDelegate();
         public event OnTriggeredDelegate OnTriggered;
-        public void Reset();
+        public void LootReset();
     }
 }
