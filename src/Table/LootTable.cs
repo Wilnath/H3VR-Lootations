@@ -10,8 +10,9 @@ namespace Lootations
     public class LootTable
     {
         public string Name { get; private set; }
-        private int TotalWeight { get; set; } = -1;
+        public string[] Meta { get; set; }
         public List<TableEntry> Entries { get; private set; } = new List<TableEntry>();
+        public int TotalWeight { get; set; } = -1;
 
         public LootTable(string name, TableEntry[] entries)
         {
@@ -27,7 +28,7 @@ namespace Lootations
             Entries.Add(entry);
         }
 
-        public string[] RollObjectId()
+        public List<string> RollObjectId()
         {
             if (TotalWeight == -1)
                 CalculateTotalWeight();
@@ -49,7 +50,7 @@ namespace Lootations
             return [];
         }
 
-        private void CalculateTotalWeight()
+        public void CalculateTotalWeight()
         {
             TotalWeight = 0;
             foreach(var entry in Entries)

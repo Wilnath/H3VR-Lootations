@@ -28,33 +28,33 @@ namespace Lootations
             Mod.customPacketHandlers[itemGrabPacketId] = ReceiveItemGrab;
         }
 
-        public static bool isConnected()
+        public static bool IsConnected()
         {
             // h3mp exists, currently in a server 
             return Lootations.h3mpEnabled && Mod.managerObject != null;
         }
         
-        public static bool isClient()
+        public static bool IsClient()
         {
-            return isConnected() && !ThreadManager.host;
+            return IsConnected() && !ThreadManager.host;
         }
 
-        public static bool isHost()
+        public static bool IsHost()
         {
-            return isConnected() && ThreadManager.host;
+            return IsConnected() && ThreadManager.host;
         }
 
         public static void ReceiveItemGrab(int clientId, Packet packet)
         {
             Lootations.Logger.LogDebug("Item grab packet received");
             int trackingId = packet.ReadInt();
-            LootManager.StopTrackingNetworkId(trackingId);
+            //LootManager.StopTrackingNetworkId(trackingId);
         }
 
         public static void SendItemGrab(GameObject obj)
         {
             //Lootations.Logger.LogDebug("Attempting to send item grab.");
-            if (isClient())
+            if (IsClient())
             {
                 TrackedObjectData data = obj.GetComponent<TrackedItem>().data;
                 if (data == null)

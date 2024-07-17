@@ -1,11 +1,11 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Collections;
 using FistVR;
 using System.Data;
+using UnityEngine.AI;
 
 namespace Lootations
 {
@@ -30,6 +30,38 @@ namespace Lootations
             }
 
             return lootSpawnPoints;
+        }
+
+        // From 30f is from packers code, hopefully good enough
+        private static readonly float NAVMESH_QUERY_RANGE = 30.0f;
+        public static bool FindPointOnNavmesh(Vector3 centre, out Vector3 result)
+        {
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(centre, out hit, NAVMESH_QUERY_RANGE, NavMesh.AllAreas))
+            {
+                result = hit.position;
+                return true;
+            }
+            result = Vector3.zero;
+            return false;
+        }
+
+        public static bool RandomPointOnNavmesh(Vector3 centre, float range, out Vector3 result)
+        {
+            // Copied from https://docs.unity3d.com/ScriptReference/AI.NavMesh.SamplePosition.html
+
+            for (int i = 0; i < 30; i++)
+            {
+                Vector3 randomPoint = centre + Random.insideUnitSphere * range;
+                NavMeshHit hit;
+                if (NavMesh.SamplePosition(randomPoint, out hit, 0.5f, NavMesh.AllAreas))
+                {
+                    result = hit.position;
+                    return true;
+                }
+            }
+            result = Vector3.zero;
+            return false;
         }
 
         public static string GetRandomInStringArray(string[] arr) 

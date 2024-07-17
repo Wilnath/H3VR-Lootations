@@ -19,8 +19,7 @@ namespace Lootations
 
         public TableType Type { get; set; }
         public int Weight { get; set; }
-        public string Meta { get; set; }
-        public string[] LootIds { get; set; }
+        public List<String> LootIds { get; set; }
 
         public static TableEntry ObjectEntry(string objectId, int weight)
         {
@@ -32,7 +31,7 @@ namespace Lootations
             return new TableEntry { Weight = weight, LootIds = [ tableName ] , Type = TableType.TABLE_REFERENCE };
         }
 
-        public string[] RollObjectId()
+        public List<string> RollObjectId()
         {
             switch (Type)
             {
@@ -65,7 +64,7 @@ namespace Lootations
 
         private void InitializeTagTable()
         {
-            if (Type != TableType.TAGS || LootIds.Length == 0)
+            if (Type != TableType.TAGS || LootIds.Count == 0)
                 return;
 
             string[] splitTag = LootIds[0].Split(':');

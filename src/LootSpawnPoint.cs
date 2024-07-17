@@ -11,7 +11,7 @@ namespace Lootations
 {
     public class LootSpawnPoint : MonoBehaviour
     {
-        public string[] ObjectIds { get; set; } = [];
+        public List<string> ObjectIds { get; set; } = new();
         public string TableName { get; set; } = "NONE";
         public string[] ProgressiveLootTables = [
             "Level 0",
@@ -26,7 +26,7 @@ namespace Lootations
         public bool UseInstanceSettings = false;
         public float CullDistance = 250f;
 
-        public delegate void LootRolledDelegate(string[] newLoot);
+        public delegate void LootRolledDelegate(List<string> newLoot);
         public event LootRolledDelegate LootRolled;
 
         private bool HasSpawnedLoot = false;
@@ -157,18 +157,18 @@ namespace Lootations
         public IEnumerator SpawnLoot()
         {
 
-            if (Networking.isClient())
+            /*if (Networking.IsClient())
             {
                 yield break;
-            }
+            }*/
 
-            if (ObjectIds.Length == 0)
+            if (ObjectIds.Count == 0)
             {
                 Lootations.Logger.LogWarning("Skipped spawn due to empty lootable.");
                 yield break;
             }
 
-            for (int i = 0; i < ObjectIds.Length; i++)
+            for (int i = 0; i < ObjectIds.Count; i++)
             {
                 string objectId = ObjectIds[i];
                 // Get the object and wait for it to load
@@ -216,22 +216,14 @@ namespace Lootations
                 var callback = obj.GetGameObjectAsync();
                 yield return callback;
 
-                if (callback == null)
-                {
-                    Lootations.Logger.LogError("Failed getting the object or... something.");
-                    yield break;
-                }
-
                 HasSpawnedLoot = true;
 
                 // TODO: Randomize spawn location if several items
                 // Instantiate it at our position and rotation
                 GameObject spawnedObj = Instantiate(callback.Result, transform.position, transform.rotation * LootManager.RandomRotation());
                 LootManager.spawnedLoot.Add(spawnedObj, this);
-                spawnedObj.SetActive(true);
                 spawnedLoot.Add(spawnedObj);
-                Rigidbody objRb = spawnedObj.GetComponent<Rigidbody>();
-                objRb.isKinematic = false;
+                spawnedObj.SetActive(true);
                 yield return null;
             }
         }

@@ -32,7 +32,7 @@ namespace Lootations
             if (spawnedObject != null)
                 Destroy(spawnedObject);
 
-            int randomIndex = UnityEngine.Random.Range(0, Objects.Length);
+            int randomIndex = Random.Range(0, Objects.Length);
             spawnedObject = Objects[randomIndex];
 
             if (spawnedObject == null)

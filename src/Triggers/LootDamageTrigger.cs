@@ -28,8 +28,8 @@ namespace Lootations
             {
                 return;
             }
-            OnTriggered?.Invoke();
             GetComponent<AudioSource>()?.Play();
+            OnTriggered?.Invoke();
         }
 
         public void LootReset()

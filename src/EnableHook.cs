@@ -37,7 +37,17 @@ namespace Lootations
             {
                 visible = !visible;
             }
-            gameObject.SetActive(visible);
+            //gameObject.SetActive(visible);
+            Renderer r = GetComponent<Renderer>();
+            if (r != null)
+            {
+                r.enabled = visible;
+            }
+            Collider c = GetComponent<Collider>();
+            if (c != null) 
+            {
+                c.enabled = visible;
+            }
         }
     }
 }

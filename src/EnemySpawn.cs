@@ -40,7 +40,6 @@ namespace Lootations
             if (Utilities.PlayerWithinDistance(transform.position, PlayerDistanceToSpawn))
             {
                 Spawn();
-                Lootations.Logger.LogDebug("Attempting to spawn enemies");
                 spawned = true;
             }
         }
@@ -98,8 +97,12 @@ namespace Lootations
             {
                 SosigEnemyID id = SR_Global.GetRandomSosigIDFromPool(parameters.pool);
                 Quaternion rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-                Vector3 offset = new Vector3(Random.Range(-1.0f, 1.0f), 0, Random.Range(-1.0f, 1.0f));
-                Sosig sosig = SosigAPI.Spawn(IM.Instance.odicSosigObjsByID[id], options, transform.position + offset, rotation);
+                if (!Utilities.RandomPointOnNavmesh(transform.position, 0.5f, out Vector3 spawnPos))
+                {
+                    Lootations.Logger.LogDebug("Could not find spawn position for EnemySpawn sosig");
+                    continue;
+                }
+                Sosig sosig = SosigAPI.Spawn(IM.Instance.odicSosigObjsByID[id], options, spawnPos, rotation);
                 spawnedSosigs.Add(sosig);
 
                 if (SR_Manager.instance.isActiveAndEnabled)

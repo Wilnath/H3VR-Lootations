@@ -19,6 +19,7 @@ namespace Lootations
         public static ConfigEntry<float> SosigSpawnDistance;
         public static ConfigEntry<float> SosigDeSpawnDistance;
         public static ConfigEntry<bool> CullingEnabled;
+        public static ConfigEntry<string> DisabledModDrops;
 
         private static Harmony harmonyInstance;
         
@@ -29,7 +30,6 @@ namespace Lootations
             harmonyInstance = new Harmony("LootationsHarmonyInstance");
             harmonyInstance.PatchAll();
 
-            TableManager.Initialize();
             h3mpEnabled = Chainloader.PluginInfos.ContainsKey("VIP.TommySoucy.H3MP");
 
             SetupConfig();
@@ -47,6 +47,7 @@ namespace Lootations
 
             CullingEnabled = Config.Bind("Experimental", "Culling", true, "If untouched items are to be disabled after player is set distance away from the loot spawn point.");
             ItemCullingDistance = Config.Bind("Experimental", "ItemCullingDistance", 50f, "The distance at which items are set to be inactive.");
+            DisabledModDrops = Config.Bind("Mods", "DisabledModDrops", "", "Plugin names that should count as not being loaded for loot tables. Seperate plugin names with a colon");
         }
     }
 }

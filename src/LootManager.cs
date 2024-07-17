@@ -14,14 +14,14 @@ namespace Lootations
         private static readonly int MAX_SPAWNS = -1;
 
         public static Dictionary<GameObject, LootSpawnPoint> spawnedLoot = new();
-        private static List<LootObject> lootTriggers = new();
-        private static List<LootObjectRandomizer> objectSpawns = new List<LootObjectRandomizer>();
-        private static List<LootSpawnPoint> lootSpawns = new();
+        private static List<LootObject> LootTriggers = new();
+        private static List<LootSpawnPoint> LootSpawns = new();
+        private static List<LootObjectRandomizer> ObjectSpawns = new List<LootObjectRandomizer>();
         private static int spawnPointsActivated = 0;
 
         public static readonly Vector2 MAG_AMOUNT_RANGE = new Vector2(2, 4);
 
-        public static readonly float Y_SPAWN_INCREMENT = 0f;
+        public static readonly float Y_SPAWN_INCREMENT = 0.05f;
 
         static LootManager()
         {
@@ -30,53 +30,52 @@ namespace Lootations
 
         public static bool AddLootable(LootSpawnPoint lootable)
         {
-            lootSpawns.Add(lootable);
+            LootSpawns.Add(lootable);
             return true;
         }
 
         public static void RemoveLootable(LootSpawnPoint lootable)
         {
-            if (lootSpawns.Contains(lootable))
+            if (LootSpawns.Contains(lootable))
             {
-                lootSpawns.Remove(lootable);
+                LootSpawns.Remove(lootable);
             }
         }
 
         public static bool AddTrigger(LootObject trigger)
         {
-            lootTriggers.Add(trigger);
+            LootTriggers.Add(trigger);
             return true;
         }
 
         public static bool RemoveTrigger(LootObject trigger)
         {
-            if (!lootTriggers.Contains(trigger))
+            if (!LootTriggers.Contains(trigger))
             {
                 return false;
             }
-            lootTriggers.Add(trigger);
+            LootTriggers.Add(trigger);
             return true;
         }
 
         public static bool AddRandomObject(LootObjectRandomizer obj)
         {
-            objectSpawns.Add(obj);
+            ObjectSpawns.Add(obj);
             return true;
         }
 
         public static void OnPhysicalObjectPickup(GameObject obj)
         {
-            if (Networking.isClient())
-            {
-                Networking.SendItemGrab(obj);
-            }
 
             if (spawnedLoot.ContainsKey(obj))
             {
                 Lootations.Logger.LogDebug("Removed object from tracked spawned loot pool.");
                 spawnedLoot[obj].StopTrackingObject(obj);
                 spawnedLoot.Remove(obj);
-                Networking.SendItemGrab(obj);
+                /*if (Networking.IsClient())
+                {
+                    Networking.SendItemGrab(obj);
+                }*/
             }
         }
 
@@ -84,12 +83,12 @@ namespace Lootations
         {
             Lootations.Logger.LogInfo("Removing track of spawned items.");
             spawnedLoot.Clear();
-            lootSpawns.Clear();
-            lootTriggers.Clear();
-            objectSpawns.Clear();
+            LootSpawns.Clear();
+            LootTriggers.Clear();
+            ObjectSpawns.Clear();
         }
 
-        public static void StopTrackingNetworkId(int trackingId)
+        /*public static void StopTrackingNetworkId(int trackingId)
         {
             Lootations.Logger.LogDebug("Attempting to remove " + trackingId.ToString());
             foreach (var kvp in spawnedLoot)
@@ -103,11 +102,11 @@ namespace Lootations
                     break;
                 }
             }
-        }
+        }*/
 
         private static void ShuffleSpawns()
         {
-            lootSpawns = lootSpawns.OrderBy(_ => Random.Range(0f, 1f)).ToList();
+            LootSpawns = LootSpawns.OrderBy(_ => Random.Range(0f, 1f)).ToList();
         }
 
         private static void OnSupplyPointChange()
@@ -135,29 +134,29 @@ namespace Lootations
             spawnedLoot = new();
 
             Lootations.Logger.LogDebug("Respawning objects.");
-            for (int i = 0; i < lootSpawns.Count; i++)
+            for (int i = 0; i < LootSpawns.Count; i++)
             {
-                LootSpawnPoint point = lootSpawns[i];
+                LootSpawnPoint point = LootSpawns[i];
                 point.Reset();
             }
 
             // Reroll loot object.
-            for (int i = 0; i < objectSpawns.Count; i++)
+            for (int i = 0; i < ObjectSpawns.Count; i++)
             {
-                LootObjectRandomizer randomObject = objectSpawns[i];
+                LootObjectRandomizer randomObject = ObjectSpawns[i];
                 randomObject.RollAndSpawn();
             }
 
-            for (int i = 0; i < lootTriggers.Count; i++)
+            for (int i = 0; i < LootTriggers.Count; i++)
             {
-                LootObject trigger = lootTriggers[i];
+                LootObject trigger = LootTriggers[i];
                 trigger.Reset();
             }
 
             // Set loot spawns to correct table.
-            for (int i = 0; i < lootSpawns.Count; i++)
+            for (int i = 0; i < LootSpawns.Count; i++)
             {
-                LootSpawnPoint lootable = lootSpawns[i];
+                LootSpawnPoint lootable = LootSpawns[i];
                 lootable.SetLevel(level);
             }
 
