@@ -47,6 +47,7 @@ namespace Lootations
                 ILootTrigger lootTrigger = trigger as ILootTrigger;
                 lootObject.OnTriggerReset += lootTrigger.LootReset;
                 lootTrigger.OnTriggered += lootObject.Trigger;
+                LootManager.AddLootTrigger(lootTrigger);
             }
         }
 
@@ -68,15 +69,12 @@ namespace Lootations
             }
             Triggered = true;
             LootObjectTriggered?.Invoke();
-            if (Lootations.h3mpEnabled)
+            if (Lootations.h3mpEnabled && Networking.IsConnected())
             {
+                Networking.SendTriggerActivated(LootManager.GetLootTriggerId(trigger));
                 if (Networking.IsClient())
                 {
-                    Networking.SendTriggerActivated()
                     return;
-                }
-                else if (Networking.IsHost())
-                {
                 }
             }
             SpawnItemsAtLootSpawns();

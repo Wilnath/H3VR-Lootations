@@ -3,71 +3,100 @@ using UnityEngine;
 using H3MP;
 using H3MP.Networking;
 using H3MP.Tracking;
-
-
-/*
- * (Client does not spawn objectrandomizer prefabs due to desync)
- * ObjectRandomizer prefabs should be placed the same on host and client
- * this means the RNG is synchronized, so use the RNG here to assign IDs
- * Client can send trigger activation of things they interact with (this requires a trigger ID)
- * loot objects must somehow communicate trigger ids?
- * Server can take trigger ids, clients don't ask for spawn only communicate stuff they trigger
- * Spawns only happen on serverside
- * Items that spawn have their own id in LootManager
- * (or use H3MP tracked object data, it SHOULD work??)
- * (host can not double spawn incase of already spawned)
- */
-// sr compass code !
+using System.Collections.Generic;
+using Valve.VR;
 
 namespace Lootations
 {
     public static class Networking
     {
-        // TODO dict?
-        private static readonly string PACKET_TYPE_STRING_ID = "Lootations_ItemGrab";
-        private static int itemGrabPacketId = -1;
+        private static readonly string ITEM_GRAB_STRING_ID = "Lootations_ItemGrab";
         private static readonly string REROLL_LOOT_STRING_ID = "Lootations_RerollLoot";
-        private static int rerollLootPacketId = -1;
-        private static readonly string TRIGGER_ACTIVATED_STRING_ID= "Lootations_TriggerActivated";
-        private static int triggerActivatedPacketId = -1;
+        private static readonly string TRIGGER_ACTIVATED_STRING_ID = "Lootations_TriggerActivated";
+
+        private static Dictionary<string, Mod.CustomPacketHandler> packetHandlers = new() {
+            { ITEM_GRAB_STRING_ID, ReceiveItemGrab },
+            { REROLL_LOOT_STRING_ID, ReceiveRerollLoot },
+            { TRIGGER_ACTIVATED_STRING_ID, ReceiveTriggerActivated },
+        };
+        private static Dictionary<string, int> packetIds = new();
 
         public static void InitializeNetworking()
         {
+            if (!IsConnected())
+            {
+                return;
+            }
             SetupPacketTypes();
         }
 
-        // TODO: MaaAAAaaan. this is verbose af
+        // TODO: okay it's now less long but did you maybe try too hard to outsmart the system?
+        // maybe this is slow af?
         private static void SetupPacketTypes()
         {
-            if (Mod.registeredCustomPacketIDs.ContainsKey(PACKET_TYPE_STRING_ID))
+            Lootations.Logger.LogDebug("Setting up packet types.");
+            foreach (var item in packetHandlers)
             {
-                itemGrabPacketId = Mod.registeredCustomPacketIDs[PACKET_TYPE_STRING_ID];
+                if (!packetIds.ContainsKey(item.Key))
+                {
+                    Lootations.Logger.LogDebug("Adding handler " + item.Key + " as default ID");
+                    packetIds.Add(item.Key, -1);
+                }
             }
+            if (IsHost())
+            {
+                Lootations.Logger.LogDebug("Setting up packets as host.");
+                foreach (var item in packetHandlers)
+                {
+                    Lootations.Logger.LogDebug("Setting up handler " + item.Key);
+                    if (Mod.registeredCustomPacketIDs.ContainsKey(item.Key))
+                    {
+                        packetIds[item.Key] = Mod.registeredCustomPacketIDs[item.Key];
+                        Lootations.Logger.LogDebug("Handler already existed as id " + packetIds[item.Key]);
+                    }
+                    else
+                    {
+                        packetIds[item.Key] = Server.RegisterCustomPacketType(item.Key);
+                        Lootations.Logger.LogDebug("Handler registered as id " + packetIds[item.Key]);
+                    }
+                    Mod.customPacketHandlers[packetIds[item.Key]] = item.Value;
+                }
+            }
+            else if (IsClient()) 
+            {
+                Lootations.Logger.LogDebug("Setting up packets as client.");
+                Mod.CustomPacketHandlerReceived += ReceiveClientPacketSync;
+                foreach (var item in packetHandlers)
+                {
+                    Lootations.Logger.LogDebug("Processing handler " + item.Key.ToString());
+                    if (Mod.registeredCustomPacketIDs.ContainsKey(item.Key))
+                    {
+                        packetIds[item.Key] = Mod.registeredCustomPacketIDs[item.Key];
+                        Mod.customPacketHandlers[packetIds[item.Key]] = packetHandlers[item.Key];
+                        Lootations.Logger.LogDebug("Handler already registered as id " + packetIds[item.Key]);
+                    }
+                    else
+                    {
+                        Lootations.Logger.LogDebug("Registering the handler as new, awaiting ID from host.");
+                        ClientSend.RegisterCustomPacketType(item.Key);
+                    }
+                }
+            }
+        }
+            
+        public static void ReceiveClientPacketSync(string ID, int index)
+        {
+            Lootations.Logger.LogDebug("Got ClientPacketSync for HandlerID " + ID + " index: " + index);
+            if (packetHandlers.ContainsKey(ID))
+            {
+                packetIds[ID] = index;
+                Mod.customPacketHandlers[index] = packetHandlers[ID];
+                Lootations.Logger.LogDebug("Successfully connected handling for packet ID: " + ID);
+            } 
             else
             {
-                itemGrabPacketId = Server.RegisterCustomPacketType(PACKET_TYPE_STRING_ID);
+                //Lootations.Logger.LogError("Unknown handler id in custom packet handler sync: " + handlerID);
             }
-            Mod.customPacketHandlers[itemGrabPacketId] = ReceiveItemGrab;
-
-            if (Mod.registeredCustomPacketIDs.ContainsKey(REROLL_LOOT_STRING_ID))
-            {
-                rerollLootPacketId = Mod.registeredCustomPacketIDs[REROLL_LOOT_STRING_ID];
-            }
-            else
-            {
-                rerollLootPacketId = Server.RegisterCustomPacketType(REROLL_LOOT_STRING_ID);
-            }
-            Mod.customPacketHandlers[rerollLootPacketId] = ReceiveRerollLoot;
-
-            if (Mod.registeredCustomPacketIDs.ContainsKey(TRIGGER_ACTIVATED_STRING_ID))
-            {
-                triggerActivatedPacketId = Mod.registeredCustomPacketIDs[TRIGGER_ACTIVATED_STRING_ID];
-            }
-            else
-            {
-                triggerActivatedPacketId = Server.RegisterCustomPacketType(TRIGGER_ACTIVATED_STRING_ID);
-            }
-            Mod.customPacketHandlers[triggerActivatedPacketId] = ReceiveTriggerActivated;
         }
 
         public static bool IsConnected()
@@ -110,12 +139,24 @@ namespace Lootations
             //Lootations.Logger.LogDebug("Attempting to send item grab.");
             if (IsClient())
             {
-                TrackedObjectData data = obj.GetComponent<TrackedItem>().data;
+                if (obj == null)
+                {
+                    Lootations.Logger.LogDebug("Obj is, somehow, null");
+                    return;
+                }
+                TrackedItem item = obj.GetComponent<TrackedItem>();
+                if (item == null)
+                {
+                    Lootations.Logger.LogDebug("Obj found but no TrackedItem");
+                    return;
+                }
+                TrackedObjectData data = item.data;
                 if (data == null)
                 {
-                    Lootations.Logger.LogError("Tried to get tracking of object that doesn't have it!");
+                    Lootations.Logger.LogDebug("Tried to get tracking of object that doesn't have it!");
+                    return;
                 }
-                Packet packet = new Packet(itemGrabPacketId);
+                Packet packet = new Packet(packetIds[ITEM_GRAB_STRING_ID]);
                 packet.Write(data.trackedID);
                 ClientSend.SendTCPData(packet, true);
             } 
@@ -134,7 +175,7 @@ namespace Lootations
 
         public static void SendRerollLoot(int seed)
         {
-            Packet packet = new Packet(rerollLootPacketId);
+            Packet packet = new Packet(packetIds[REROLL_LOOT_STRING_ID]);
             packet.Write(seed);
             ServerSend.SendTCPDataToAll(packet, true);
         }
@@ -142,12 +183,18 @@ namespace Lootations
         public static void ReceiveRerollLoot(int clientId, Packet p)
         {
             int seed = p.ReadInt();
+            if (IsHost())
+            {
+                // shouldn't happen, but just in case
+                Lootations.Logger.LogInfo("Ignoring reroll loot packet as host.");
+                return;
+            }
             LootManager.RerollLoot(seed);
         }
 
         public static void SendTriggerActivated(int id)
         {
-            Packet packet = new Packet();
+            Packet packet = new Packet(packetIds[TRIGGER_ACTIVATED_STRING_ID]);
             packet.Write(id);
             if (IsClient())
             {
@@ -163,6 +210,10 @@ namespace Lootations
         {
             int id = packet.ReadInt();
             ILootTrigger trigger = LootManager.GetLootTriggerById(id);
+            if (trigger == null)
+            {
+                Lootations.Logger.LogError("Got packet to trigger non-existing loot trigger!");
+            }
             trigger.Trigger();
             // If host, trigger triggers and is then broadcasted to all
         }

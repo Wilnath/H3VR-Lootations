@@ -120,6 +120,10 @@ namespace Lootations
 
         public void Reset()
         {
+            if (Lootations.h3mpEnabled && Networking.IsClient())
+            {
+                return;
+            }
             foreach(GameObject go in spawnedLoot)
             {
                 Destroy(go);
@@ -151,7 +155,10 @@ namespace Lootations
         void OnDestroy()
         {
             LootManager.RemoveLootSpawn(this);
-            StopCoroutine(CullUpdateRoutine);
+            if (CullUpdateRoutine != null)
+            {
+                StopCoroutine(CullUpdateRoutine);
+            }
         }
 
         public IEnumerator SpawnLoot()

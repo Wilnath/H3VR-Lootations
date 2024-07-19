@@ -5,6 +5,7 @@ using HarmonyLib;
 using H3MP;
 using H3MP.Networking;
 using BepInEx.Configuration;
+using UnityEngine.SceneManagement;
 
 namespace Lootations
 {
@@ -32,12 +33,19 @@ namespace Lootations
             harmonyInstance.PatchAll();
 
             h3mpEnabled = Chainloader.PluginInfos.ContainsKey("VIP.TommySoucy.H3MP");
+            SceneManager.activeSceneChanged += OnSceneSwitched;
+
+            SetupConfig();
+        }
+
+        private void OnSceneSwitched(Scene old_scene, Scene new_scene)
+        {
+            Logger.LogDebug("Scene switch occurred");
             if (h3mpEnabled)
             {
                 Networking.InitializeNetworking();
             }
-
-            SetupConfig();
+            LootManager.OnSceneSwitched();
         }
         
         // The line below allows access to your plugin's logger from anywhere in your code, including outside of this file.

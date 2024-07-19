@@ -7,6 +7,7 @@ using UnityEngine;
 using H3MP.Tracking;
 using Sodalite.Api;
 using MapGenerator;
+using H3MP.Networking;
 
 namespace Lootations
 {
@@ -57,10 +58,14 @@ namespace Lootations
 
         public static ILootTrigger GetLootTriggerById(int id)
         {
+            if (!LootTriggers.ContainsKey(id))
+            {
+                return null;
+            }
             return LootTriggers[id];
         }
 
-        public static int GetIdByLootTrigger(ILootTrigger trigger)
+        public static int GetLootTriggerId(ILootTrigger trigger)
         {
             return LootTriggerIds[trigger];
         }
@@ -81,13 +86,13 @@ namespace Lootations
             return true;
         }
 
-        public static bool RemoveLootObject(LootObject trigger)
+        public static bool RemoveLootObject(LootObject obj)
         {
-            if (!LootObjects.Contains(trigger))
+            if (!LootObjects.Contains(obj))
             {
                 return false;
             }
-            LootObjects.Add(trigger);
+            LootObjects.Remove(obj);
             return true;
         }
 
@@ -123,17 +128,41 @@ namespace Lootations
         public static void StopTrackingNetworkId(int trackingId)
         {
             Lootations.Logger.LogDebug("Attempting to remove " + trackingId.ToString());
-            foreach (var kvp in spawnedLoot)
+            if (Server.objects == null)
             {
-                GameObject obj = kvp.Key;
-                TrackedObjectData data = obj.GetComponent<TrackedItem>().data;
-                if (data != null && data.trackedID == trackingId)
-                {
-                    Lootations.Logger.LogDebug("Found object to remove! Removing a " + obj.name);
-                    spawnedLoot.Remove(obj);
-                    break;
-                }
+                Lootations.Logger.LogError("that stuff is null even");
+                return;
             }
+            if (trackingId < 0 && trackingId >= Server.objects.Length)
+            {
+                Lootations.Logger.LogError("Clients.objects does not work like that it turns out");
+                return;
+            }
+            TrackedObjectData obj = Server.objects[trackingId];
+            if (obj == null)
+            {
+                Lootations.Logger.LogError("stop tracking null check obj");
+                return;
+            }
+            TrackedObject physical = obj.physical;
+            if (physical == null)
+            {
+                Lootations.Logger.LogError("stop tracking null check physical");
+                return;
+            }
+            GameObject gameObj = physical.gameObject;
+            if (gameObj == null)
+            {
+                Lootations.Logger.LogError("stop tracking null check gameObj");
+                return;
+            }
+            if (spawnedLoot.ContainsKey(gameObj))
+            {
+                Lootations.Logger.LogDebug("REMOVED IT!");
+                LootSpawnPoint point = spawnedLoot[gameObj];
+                point.StopTrackingObject(gameObj);
+            }
+            return;
         }
 
         private static void ShuffleSpawns()
@@ -189,13 +218,13 @@ namespace Lootations
             {
                 level = SR_Manager.instance.CurrentCaptures;
             }
+            Lootations.Logger.LogDebug("Respawning objects with seed: " + seed.ToString());
             Random.InitState(seed);
 
             spawnPointsActivated = 0;
             ShuffleSpawns();
             spawnedLoot = new();
 
-            Lootations.Logger.LogDebug("Respawning objects.");
             for (int i = 0; i < LootSpawns.Count; i++)
             {
                 LootSpawnPoint point = LootSpawns[i];
@@ -203,18 +232,32 @@ namespace Lootations
             }
 
             // Reroll loot object.
+            bool hitLimit = false;
             for (int i = 0; i < ObjectSpawns.Count; i++)
             {
-                // TODO: MG dep
-                if ((MAX_SPAWNS != -1 && i >= MAX_SPAWNS)
-                    || (MG_Manager.instance.isActiveAndEnabled && MG_Manager.profile.srLootSpawns >= i))
+                if (MAX_SPAWNS != -1 && i >= MAX_SPAWNS)
                 {
+                    Lootations.Logger.LogDebug("Stopping respawn of loot objects, hit config limit of " + MAX_SPAWNS);
+                    hitLimit = true;
+                    break;
+                }
+                // TODO: MG dep
+                if (MG_Manager.instance.isActiveAndEnabled && MG_Manager.profile.srLootSpawns != 0 && MG_Manager.profile.srLootSpawns >= i)
+                {
+                    Lootations.Logger.LogDebug("Stopping respawn of loot objects, hit MG profile limit of " + MG_Manager.profile.srLootSpawns);
+                    hitLimit = true;
                     break;
                 }
                 LootObjectRandomizer randomObject = ObjectSpawns[i];
                 randomObject.RollAndSpawn();
                 spawnPointsActivated++;
             }
+
+            if (!hitLimit)
+            {
+                Lootations.Logger.LogDebug("No limit hit for ObjectRandomizer rerolls.");
+            }
+            Lootations.Logger.LogDebug("Spawned " + spawnPointsActivated.ToString() + " objects.");
 
             for (int i = 0; i < LootObjects.Count; i++)
             {
@@ -227,18 +270,6 @@ namespace Lootations
             {
                 LootSpawnPoint lootable = LootSpawns[i];
                 lootable.SetLevel(level);
-            }
-
-            if (MAX_SPAWNS != -1 && spawnPointsActivated < MAX_SPAWNS)
-            {
-                if (spawnPointsActivated < MAX_SPAWNS)
-                {
-                    Lootations.Logger.LogWarning("Spawned less items than max spawns allows for. Maybe up the interior props?");
-                }
-                else
-                {
-                    Lootations.Logger.LogInfo("Spawned as many random loot objects as max spawns allow for.");
-                }
             }
         }
 

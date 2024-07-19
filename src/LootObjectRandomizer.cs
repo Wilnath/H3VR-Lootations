@@ -36,7 +36,10 @@ namespace Lootations
         public void RollAndSpawn()
         {
             if (Objects.Length == 0)
+            {
+                Lootations.Logger.LogWarning("ObjectRandomizer told to spawn with objects of length 0.");
                 return;
+            }
 
             if (spawnedObject != null)
                 Destroy(spawnedObject);
@@ -46,6 +49,7 @@ namespace Lootations
 
             if (spawnedObject == null)
             {
+                Lootations.Logger.LogDebug("ObjectRandomizer rolled null");
                 return;
             }
 
