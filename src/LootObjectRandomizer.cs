@@ -1,4 +1,5 @@
 ﻿using FistVR;
+using H3MP.Networking;
 using SupplyRaid;
 using UnityEngine;
 
@@ -22,6 +23,14 @@ namespace Lootations
             {
                 Lootations.Logger.LogError("LootObjectRandomizer has Objects of length 0.");
             }
+        }
+
+        public void Destroy()
+        {
+            if (spawnedObject != null)
+                Destroy(spawnedObject);
+
+            spawnedObject = null;
         }
 
         public void RollAndSpawn()

@@ -14,6 +14,7 @@ namespace Lootations
     {
         public static bool h3mpEnabled = false;
 
+        public static ConfigEntry<int> MaxRandomLootObjectSpawns;
         public static ConfigEntry<float> ProximitySpawnDistance;
         public static ConfigEntry<float> ItemCullingDistance;
         public static ConfigEntry<float> SosigSpawnDistance;
@@ -31,6 +32,10 @@ namespace Lootations
             harmonyInstance.PatchAll();
 
             h3mpEnabled = Chainloader.PluginInfos.ContainsKey("VIP.TommySoucy.H3MP");
+            if (h3mpEnabled)
+            {
+                Networking.InitializeNetworking();
+            }
 
             SetupConfig();
         }
@@ -41,13 +46,15 @@ namespace Lootations
 
         private void SetupConfig()
         {
+            MaxRandomLootObjectSpawns = Config.Bind("Gameplay", "MaxRandomLootObjectSpawns", 250, "The maximum amount of random loot objects that will spawn per level. -1 to disable");
+            DisabledModDrops = Config.Bind("Gameplay", "DisabledModDrops", "", "Plugin names that should count as not being loaded for loot tables. Seperate plugin names with a colon");
+
             SosigSpawnDistance = Config.Bind("Performance", "SosigSpawnDistance", 75f, "How far away you have to be for sausages to spawn in.");
             SosigDeSpawnDistance = Config.Bind("Performance", "SosigDeSpawnDistance", 150f, "TODO");
-            ProximitySpawnDistance = Config.Bind("Performance", "ProximitySpawnDistance", 50f, "Distance until Proximity triggers activate, can be expensive if too far.\nNote: Some proximity triggers override this setting.");
+            ProximitySpawnDistance = Config.Bind("Performance", "ProximitySpawnDistance", 25f, "Distance until Proximity triggers activate, can be expensive if too far.\nNote: Some proximity triggers override this setting.");
 
             CullingEnabled = Config.Bind("Experimental", "Culling", true, "If untouched items are to be disabled after player is set distance away from the loot spawn point.");
             ItemCullingDistance = Config.Bind("Experimental", "ItemCullingDistance", 50f, "The distance at which items are set to be inactive.");
-            DisabledModDrops = Config.Bind("Mods", "DisabledModDrops", "", "Plugin names that should count as not being loaded for loot tables. Seperate plugin names with a colon");
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Lootations
 
         public void Awake()
         {
-            LootObject.Hook(LootObjectOwner, this);
+            LootObject.HookTrigger(LootObjectOwner, this);
         }
 
         private void OnTriggerEnter(Collider other)
@@ -24,9 +24,14 @@ namespace Lootations
             {
                 if (cardComponent.TierType == KeycardTier)
                 {
-                    OnTriggered?.Invoke();
+                    Trigger();
                 }
             }
+        }
+
+        public void Trigger()
+        {
+            OnTriggered?.Invoke(this);
         }
 
         void OnDrawGizmos()

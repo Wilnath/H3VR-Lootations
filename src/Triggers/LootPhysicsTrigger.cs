@@ -22,13 +22,18 @@ namespace Lootations
             startingPosition = transform.localPosition;
             startingRotation = transform.localRotation;
             startingScale = transform.localScale;
-            LootObject.Hook(LootObjectOwner, this);
+            LootObject.HookTrigger(LootObjectOwner, this);
         }
 
         public override void BeginInteraction(FVRViveHand hand)
         {
             base.BeginInteraction(hand);
-            OnTriggered?.Invoke();
+            Trigger();
+        }
+
+        public void Trigger()
+        {
+            OnTriggered?.Invoke(this);
         }
 
         public void LootReset()

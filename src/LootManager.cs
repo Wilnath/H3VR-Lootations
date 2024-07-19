@@ -6,6 +6,7 @@ using System.Linq;
 using UnityEngine;
 using H3MP.Tracking;
 using Sodalite.Api;
+using MapGenerator;
 
 namespace Lootations
 {
@@ -13,10 +14,16 @@ namespace Lootations
     {
         private static readonly int MAX_SPAWNS = -1;
 
+        private static int LootTriggerCounter = 0;
+
         public static Dictionary<GameObject, LootSpawnPoint> spawnedLoot = new();
-        private static List<LootObject> LootTriggers = new();
+        private static List<LootObject> LootObjects = new();
         private static List<LootSpawnPoint> LootSpawns = new();
         private static List<LootObjectRandomizer> ObjectSpawns = new List<LootObjectRandomizer>();
+        private static Dictionary<int, ILootTrigger> LootTriggers = new();
+        // horrible, actually disgusting, god please i want a different way to do this but i can't store ints in loottriggers
+        // without screwing up the codebase
+        private static Dictionary<ILootTrigger, int> LootTriggerIds = new();
         private static int spawnPointsActivated = 0;
 
         public static readonly Vector2 MAG_AMOUNT_RANGE = new Vector2(2, 4);
@@ -28,13 +35,13 @@ namespace Lootations
             SR_Manager.SupplyPointChangeEvent += OnSupplyPointChange;
         }
 
-        public static bool AddLootable(LootSpawnPoint lootable)
+        public static bool AddLootSpawn(LootSpawnPoint lootable)
         {
             LootSpawns.Add(lootable);
             return true;
         }
 
-        public static void RemoveLootable(LootSpawnPoint lootable)
+        public static void RemoveLootSpawn(LootSpawnPoint lootable)
         {
             if (LootSpawns.Contains(lootable))
             {
@@ -42,19 +49,45 @@ namespace Lootations
             }
         }
 
-        public static bool AddTrigger(LootObject trigger)
+        public static bool AddLootObject(LootObject obj)
         {
-            LootTriggers.Add(trigger);
+            LootObjects.Add(obj);
             return true;
         }
 
-        public static bool RemoveTrigger(LootObject trigger)
+        public static ILootTrigger GetLootTriggerById(int id)
         {
-            if (!LootTriggers.Contains(trigger))
+            return LootTriggers[id];
+        }
+
+        public static int GetIdByLootTrigger(ILootTrigger trigger)
+        {
+            return LootTriggerIds[trigger];
+        }
+
+        public static bool AddLootTrigger(ILootTrigger trigger)
+        {
+            LootTriggers.Add(LootTriggerCounter, trigger);
+            LootTriggerIds.Add(trigger, LootTriggerCounter);
+            LootTriggerCounter++;
+            return true;
+        }
+
+        public static bool RemoveLootTrigger(ILootTrigger trigger)
+        {
+            int id = LootTriggerIds[trigger];
+            LootTriggerIds.Remove(trigger);
+            LootTriggers.Remove(id);
+            return true;
+        }
+
+        public static bool RemoveLootObject(LootObject trigger)
+        {
+            if (!LootObjects.Contains(trigger))
             {
                 return false;
             }
-            LootTriggers.Add(trigger);
+            LootObjects.Add(trigger);
             return true;
         }
 
@@ -66,16 +99,15 @@ namespace Lootations
 
         public static void OnPhysicalObjectPickup(GameObject obj)
         {
-
+            if (Lootations.h3mpEnabled && Networking.IsClient())
+            {
+                Networking.SendItemGrab(obj);
+            }
             if (spawnedLoot.ContainsKey(obj))
             {
                 Lootations.Logger.LogDebug("Removed object from tracked spawned loot pool.");
                 spawnedLoot[obj].StopTrackingObject(obj);
                 spawnedLoot.Remove(obj);
-                /*if (Networking.IsClient())
-                {
-                    Networking.SendItemGrab(obj);
-                }*/
             }
         }
 
@@ -84,11 +116,11 @@ namespace Lootations
             Lootations.Logger.LogInfo("Removing track of spawned items.");
             spawnedLoot.Clear();
             LootSpawns.Clear();
-            LootTriggers.Clear();
+            LootObjects.Clear();
             ObjectSpawns.Clear();
         }
 
-        /*public static void StopTrackingNetworkId(int trackingId)
+        public static void StopTrackingNetworkId(int trackingId)
         {
             Lootations.Logger.LogDebug("Attempting to remove " + trackingId.ToString());
             foreach (var kvp in spawnedLoot)
@@ -102,7 +134,7 @@ namespace Lootations
                     break;
                 }
             }
-        }*/
+        }
 
         private static void ShuffleSpawns()
         {
@@ -111,16 +143,36 @@ namespace Lootations
 
         private static void OnSupplyPointChange()
         {
-            int captures = SR_Manager.instance.CurrentCaptures;
-            RerollLoot(captures);
+            if (Lootations.h3mpEnabled && Networking.IsConnected())
+            {
+                if (Networking.IsClient())
+                {
+                    // Await seed from host
+                    Lootations.Logger.LogDebug("Awaiting reroll of loot as client.");
+                    return;
+                }
+                else
+                {
+                    Lootations.Logger.LogDebug("Rolling loot as host.");
+                    int seed = Time.frameCount;
+                    RerollLoot(seed);
+                    Networking.SendRerollLoot(seed);
+                }
+            }
+            else
+            {
+                Lootations.Logger.LogDebug("Rolling loot as offline.");
+                RerollLoot();
+            }
         }
 
         public static void OnTNHLevelSet(int level)
         {
-            RerollLoot(level);
+            // just needed something semi-random
+            RerollLoot(Time.frameCount);
         }
 
-        private static void RerollLoot(int level)
+        public static void RerollLoot(int seed = -1)
         {
             // Avoid unneccessarily respawning items
             /*if (captures == 0)
@@ -128,6 +180,16 @@ namespace Lootations
                 Lootations.Logger.LogInfo("Skipping loot respawn due to captures = 0");
                 return;
             }*/
+            if (seed == -1)
+            {
+                seed = Time.frameCount;
+            }
+            int level = 0;
+            if (SR_Manager.instance.isActiveAndEnabled)
+            {
+                level = SR_Manager.instance.CurrentCaptures;
+            }
+            Random.InitState(seed);
 
             spawnPointsActivated = 0;
             ShuffleSpawns();
@@ -143,13 +205,20 @@ namespace Lootations
             // Reroll loot object.
             for (int i = 0; i < ObjectSpawns.Count; i++)
             {
+                // TODO: MG dep
+                if ((MAX_SPAWNS != -1 && i >= MAX_SPAWNS)
+                    || (MG_Manager.instance.isActiveAndEnabled && MG_Manager.profile.srLootSpawns >= i))
+                {
+                    break;
+                }
                 LootObjectRandomizer randomObject = ObjectSpawns[i];
                 randomObject.RollAndSpawn();
+                spawnPointsActivated++;
             }
 
-            for (int i = 0; i < LootTriggers.Count; i++)
+            for (int i = 0; i < LootObjects.Count; i++)
             {
-                LootObject trigger = LootTriggers[i];
+                LootObject trigger = LootObjects[i];
                 trigger.Reset();
             }
 
@@ -162,7 +231,14 @@ namespace Lootations
 
             if (MAX_SPAWNS != -1 && spawnPointsActivated < MAX_SPAWNS)
             {
-                Lootations.Logger.LogWarning("Spawned less items than max spawns allows for. Maybe up the spawn points?");
+                if (spawnPointsActivated < MAX_SPAWNS)
+                {
+                    Lootations.Logger.LogWarning("Spawned less items than max spawns allows for. Maybe up the interior props?");
+                }
+                else
+                {
+                    Lootations.Logger.LogInfo("Spawned as many random loot objects as max spawns allow for.");
+                }
             }
         }
 

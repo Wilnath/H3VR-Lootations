@@ -20,13 +20,17 @@ namespace Lootations
                 gameObject.SetActive(false);
                 return;
             }
-            LootObject.Hook(LootObjectOwner, this);
+            LootObject.HookTrigger(LootObjectOwner, this);
         }
 
         public override void BeginInteraction(FVRViveHand hand)
         {
-            OnTriggered?.Invoke();
             base.BeginInteraction(hand);
+        }
+
+        public void Trigger()
+        {
+            OnTriggered?.Invoke(this);
         }
 
         public override void UpdateInteraction(FVRViveHand hand)

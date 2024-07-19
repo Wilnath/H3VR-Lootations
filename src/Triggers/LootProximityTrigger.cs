@@ -23,7 +23,7 @@ namespace Lootations
 
         public void Awake()
         {
-            LootObject.Hook(LootObjectOwner, this);
+            LootObject.HookTrigger(LootObjectOwner, this);
             if (UseInstanceSettings)
             {
                 triggerDistance = TriggerDistance;
@@ -32,6 +32,11 @@ namespace Lootations
             {
                 triggerDistance = Lootations.ProximitySpawnDistance.Value;
             }
+        }
+
+        public void Trigger()
+        {
+            OnTriggered?.Invoke(this);
         }
 
         public void LootReset()
@@ -44,7 +49,7 @@ namespace Lootations
         {
             if (Utilities.PlayerWithinDistance(transform.position, triggerDistance))
             {
-                OnTriggered?.Invoke();
+                Trigger();
                 //enabled = false;
             }
         }

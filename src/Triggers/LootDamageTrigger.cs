@@ -17,7 +17,7 @@ namespace Lootations
 
         public void Awake()
         {
-            LootObject.Hook(LootObjectOwner, this);
+            LootObject.HookTrigger(LootObjectOwner, this);
         }
 
         // Event for when we are damaged by something in the game
@@ -29,7 +29,12 @@ namespace Lootations
                 return;
             }
             GetComponent<AudioSource>()?.Play();
-            OnTriggered?.Invoke();
+            Trigger();
+        }
+
+        public void Trigger()
+        {
+            OnTriggered?.Invoke(this);
         }
 
         public void LootReset()

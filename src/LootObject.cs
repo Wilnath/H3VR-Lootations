@@ -17,6 +17,7 @@ namespace Lootations
 
         [HideInInspector]
         public bool Triggered = false;
+
         public delegate void TriggerResetDelegate();
         public event TriggerResetDelegate OnTriggerReset;
 
@@ -25,7 +26,7 @@ namespace Lootations
 
         public readonly float PLAYER_PROXIMITY_GRACE_DISTANCE = 25f;
 
-        public static void Hook(GameObject lootObjectOwner, MonoBehaviour trigger)
+        public static void HookTrigger(GameObject lootObjectOwner, MonoBehaviour trigger)
         {
             LootObject lootObject;
             if (lootObjectOwner == null)
@@ -56,26 +57,43 @@ namespace Lootations
                 Lootations.Logger.LogWarning("LootTrigger skipped initialization due to missing loot points.");
             }
             spawnPoints = Utilities.GameObjectsToPoints(LootSpawnPoints);
-            LootManager.AddTrigger(this);
+            LootManager.AddLootObject(this);
         }
 
-        public void Trigger()
+        public void Trigger(ILootTrigger trigger)
         {
             if (Triggered)
             {
                 return;
             }
+            Triggered = true;
+            LootObjectTriggered?.Invoke();
+            if (Lootations.h3mpEnabled)
+            {
+                if (Networking.IsClient())
+                {
+                    Networking.SendTriggerActivated()
+                    return;
+                }
+                else if (Networking.IsHost())
+                {
+                }
+            }
+            SpawnItemsAtLootSpawns();
+        }
+
+        private void SpawnItemsAtLootSpawns()
+        {
             foreach (var item in spawnPoints)
             {
-                if (item is not LootSpawnPoint)
+                // I think this got added sometime due to a mystical one-off error? No idea why we're nullchecking here
+                if (item is null)
                 {
                     Lootations.Logger.LogError("Object: " + name + " contained non loot spawn point!");
                     continue;
                 }
                 item.Trigger();
             }
-            LootObjectTriggered?.Invoke();
-            Triggered = true;
         }
 
         public void Reset()
@@ -90,7 +108,7 @@ namespace Lootations
 
         public void OnDestroy()
         {
-            LootManager.RemoveTrigger(this);
+            LootManager.RemoveLootObject(this);
         }
     }
 }

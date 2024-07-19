@@ -6,6 +6,7 @@ using System.Collections;
 using FistVR;
 using System.Data;
 using UnityEngine.AI;
+using H3MP.Networking;
 
 namespace Lootations
 {
@@ -32,7 +33,7 @@ namespace Lootations
             return lootSpawnPoints;
         }
 
-        // From 30f is from packers code, hopefully good enough
+        // 30f is from packers code, hopefully good enough
         private static readonly float NAVMESH_QUERY_RANGE = 30.0f;
         public static bool FindPointOnNavmesh(Vector3 centre, out Vector3 result)
         {
@@ -77,16 +78,38 @@ namespace Lootations
             return GM.CurrentPlayerBody.Head.transform.position;
         }
         
-        public static bool PositonsWithinDistance(Vector3 a, Vector3 b, float distance)
+        public static bool PositionsWithinDistance(Vector3 a, Vector3 b, float distance)
         {
             // https://docs.unity3d.com/ScriptReference/Vector3-sqrMagnitude.html
             Vector3 offset = b - a;
             return offset.sqrMagnitude < distance * distance;
         }
 
+        /// <summary>
+        /// Returns the Gamemanager player at index i, does not include the local player.
+        /// </summary>
+        /// <param name="i"></param>
+        /// <returns></returns>
+        public static PlayerData GetPlayer(int i)
+        {
+            //Do error Checks
+            return PlayerData.GetPlayer(i);
+        }
+
         public static bool PlayerWithinDistance(Vector3 a, float distance)
         {
-            return PositonsWithinDistance(GetPlayerPosition(), a, distance);
+            if (Lootations.h3mpEnabled && Networking.IsHost())
+            {
+                int[] ids = Networking.GetPlayerIds();
+                foreach (var id in ids)
+                {
+                    if (PositionsWithinDistance(Networking.GetPlayerPosition(id), a, distance))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return PositionsWithinDistance(GetPlayerPosition(), a, distance);
         }
     }
 }

@@ -40,7 +40,7 @@ namespace Lootations
 
         private void Awake()
         {
-            bool active = LootManager.AddLootable(this);
+            bool active = LootManager.AddLootSpawn(this);
             gameObject.SetActive(active);
             if (Lootations.CullingEnabled.Value)
             {
@@ -150,17 +150,16 @@ namespace Lootations
 
         void OnDestroy()
         {
-            LootManager.RemoveLootable(this);
+            LootManager.RemoveLootSpawn(this);
             StopCoroutine(CullUpdateRoutine);
         }
 
         public IEnumerator SpawnLoot()
         {
-
-            /*if (Networking.IsClient())
+            if (Lootations.h3mpEnabled && Networking.IsClient())
             {
                 yield break;
-            }*/
+            }
 
             if (ObjectIds.Count == 0)
             {
