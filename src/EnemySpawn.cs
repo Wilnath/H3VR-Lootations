@@ -32,7 +32,7 @@ namespace Lootations
 
         public void Update()
         {
-            if (spawned)
+            if (spawned || (Lootations.h3mpEnabled && Networking.IsClient()))
             {
                 return;
             }

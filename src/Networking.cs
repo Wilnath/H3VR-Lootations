@@ -5,6 +5,7 @@ using H3MP.Networking;
 using H3MP.Tracking;
 using System.Collections.Generic;
 using Valve.VR;
+using UnityEngine.SceneManagement;
 
 namespace Lootations
 {
@@ -20,6 +21,11 @@ namespace Lootations
             { TRIGGER_ACTIVATED_STRING_ID, ReceiveTriggerActivated },
         };
         private static Dictionary<string, int> packetIds = new();
+
+        public static void OnSceneSwitched(Scene old_scene, Scene new_scene)
+        {
+            InitializeNetworking();
+        }
 
         public static void InitializeNetworking()
         {
@@ -72,7 +78,10 @@ namespace Lootations
                     if (Mod.registeredCustomPacketIDs.ContainsKey(item.Key))
                     {
                         packetIds[item.Key] = Mod.registeredCustomPacketIDs[item.Key];
+
+                        // I mean this should be set at this point but SOMEHOW wasn't
                         Mod.customPacketHandlers[packetIds[item.Key]] = packetHandlers[item.Key];
+
                         Lootations.Logger.LogDebug("Handler already registered as id " + packetIds[item.Key]);
                     }
                     else
@@ -213,6 +222,7 @@ namespace Lootations
             if (trigger == null)
             {
                 Lootations.Logger.LogError("Got packet to trigger non-existing loot trigger!");
+                return;
             }
             trigger.Trigger();
             // If host, trigger triggers and is then broadcasted to all

@@ -123,6 +123,9 @@ namespace Lootations
             LootSpawns.Clear();
             LootObjects.Clear();
             ObjectSpawns.Clear();
+            LootTriggers.Clear();
+            LootTriggerIds.Clear();
+            LootTriggerCounter = 0;
         }
 
         public static void StopTrackingNetworkId(int trackingId)
@@ -165,9 +168,9 @@ namespace Lootations
             return;
         }
 
-        private static void ShuffleSpawns()
+        private static void ShuffleObjectRandomizers()
         {
-            LootSpawns = LootSpawns.OrderBy(_ => Random.Range(0f, 1f)).ToList();
+            ObjectSpawns = ObjectSpawns.OrderBy(_ => Random.Range(0, int.MaxValue)).ToList();
         }
 
         private static void OnSupplyPointChange()
@@ -222,7 +225,7 @@ namespace Lootations
             Random.InitState(seed);
 
             spawnPointsActivated = 0;
-            ShuffleSpawns();
+            ShuffleObjectRandomizers();
             spawnedLoot = new();
 
             for (int i = 0; i < LootSpawns.Count; i++)
@@ -242,7 +245,7 @@ namespace Lootations
                     break;
                 }
                 // TODO: MG dep
-                if (MG_Manager.instance.isActiveAndEnabled && MG_Manager.profile.srLootSpawns != 0 && MG_Manager.profile.srLootSpawns >= i)
+                if (MG_Manager.instance.isActiveAndEnabled && MG_Manager.profile.srLootSpawns != 0 && i >= MG_Manager.profile.srLootSpawns)
                 {
                     Lootations.Logger.LogDebug("Stopping respawn of loot objects, hit MG profile limit of " + MG_Manager.profile.srLootSpawns);
                     hitLimit = true;

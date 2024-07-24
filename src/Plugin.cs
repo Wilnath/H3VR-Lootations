@@ -2,8 +2,6 @@
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using HarmonyLib;
-using H3MP;
-using H3MP.Networking;
 using BepInEx.Configuration;
 using UnityEngine.SceneManagement;
 
@@ -32,19 +30,29 @@ namespace Lootations
             harmonyInstance = new Harmony("LootationsHarmonyInstance");
             harmonyInstance.PatchAll();
 
+            SetupConfig();
+
             h3mpEnabled = Chainloader.PluginInfos.ContainsKey("VIP.TommySoucy.H3MP");
             SceneManager.activeSceneChanged += OnSceneSwitched;
+            if (h3mpEnabled)
+            {
+                Logger.LogDebug("H3MP Detected as enabled");
+                HookNetworking();
+            }
+            else
+            {
+                Logger.LogDebug("Starting with no H3MP");
+            }
+        }
 
-            SetupConfig();
+        private void HookNetworking()
+        {
+            SceneManager.activeSceneChanged += Networking.OnSceneSwitched;
         }
 
         private void OnSceneSwitched(Scene old_scene, Scene new_scene)
         {
             Logger.LogDebug("Scene switch occurred");
-            if (h3mpEnabled)
-            {
-                Networking.InitializeNetworking();
-            }
             LootManager.OnSceneSwitched();
         }
         

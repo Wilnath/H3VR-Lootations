@@ -16,6 +16,8 @@ namespace Lootations
 
         public event ILootTrigger.OnTriggeredDelegate OnTriggered;
 
+        private bool JustInteracted = false;
+
         public override void Awake()
         {
             base.Awake();
@@ -31,6 +33,10 @@ namespace Lootations
 
         public void Trigger()
         {
+            if (!JustInteracted)
+            {
+                Hinge.transform.localEulerAngles = new Vector3(0, 0, MaxRot);
+            }
             OnTriggered?.Invoke(this);
         }
 
@@ -38,7 +44,9 @@ namespace Lootations
         {
             base.BeginInteraction(hand);
             GetComponent<AudioSource>()?.Play();
+            JustInteracted = true;
             Trigger();
+            JustInteracted = false;
         }
 
         public override void UpdateInteraction(FVRViveHand hand)
