@@ -47,7 +47,7 @@ namespace Lootations
             return false;
         }
 
-        public static bool RandomPointOnNavmesh(Vector3 centre, float range, out Vector3 result)
+        public static bool SampleNavMesh(Vector3 centre, float range, out Vector3 result)
         {
             // Copied from https://docs.unity3d.com/ScriptReference/AI.NavMesh.SamplePosition.html
 
@@ -55,7 +55,7 @@ namespace Lootations
             {
                 Vector3 randomPoint = centre + Random.insideUnitSphere * range;
                 NavMeshHit hit;
-                if (NavMesh.SamplePosition(randomPoint, out hit, 0.5f, NavMesh.AllAreas))
+                if (NavMesh.SamplePosition(randomPoint, out hit, 2f, NavMesh.AllAreas))
                 {
                     result = hit.position;
                     return true;
@@ -98,7 +98,7 @@ namespace Lootations
 
         public static bool PlayerWithinDistance(Vector3 a, float distance)
         {
-            if (Lootations.h3mpEnabled && Networking.IsHost())
+            if (Networking.IsHost())
             {
                 int[] ids = Networking.GetPlayerIds();
                 foreach (var id in ids)

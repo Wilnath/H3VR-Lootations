@@ -46,6 +46,14 @@ namespace Lootations
 
         private static void RemoveZeroWeightEntries(LootTable table)
         {
+            MetaTags tags = new MetaTags();
+            MetaTags.UpdateTags(table, ref tags);
+
+            if (!tags.IsZeroWeightEntriesInvalid())
+            {
+                return;
+            }
+            
             for (int i = 0; i <  table.Entries.Count; i++)
             {
                 var item = table.Entries[i];
@@ -115,7 +123,8 @@ namespace Lootations
 
         public static void AddLootTable(LootTable table)
         {
-            MetaTags tags = MetaTagsManager.ParseTableMetaTags(table);
+            table.Tags = MetaTags.ParseTableTags(table);
+            MetaTags tags = table.Tags;
             foreach (IValidator validator in tags.Validators)
             {
                 if (!validator.IsValid())

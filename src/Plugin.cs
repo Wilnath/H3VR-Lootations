@@ -37,7 +37,6 @@ namespace Lootations
             if (h3mpEnabled)
             {
                 Logger.LogDebug("H3MP Detected as enabled");
-                HookNetworking();
             }
             else
             {
@@ -45,15 +44,11 @@ namespace Lootations
             }
         }
 
-        private void HookNetworking()
-        {
-            SceneManager.activeSceneChanged += Networking.OnSceneSwitched;
-        }
-
         private void OnSceneSwitched(Scene old_scene, Scene new_scene)
         {
             Logger.LogDebug("Scene switch occurred");
             LootManager.OnSceneSwitched();
+            SceneManager.activeSceneChanged += Networking.OnSceneSwitched;
         }
         
         // The line below allows access to your plugin's logger from anywhere in your code, including outside of this file.

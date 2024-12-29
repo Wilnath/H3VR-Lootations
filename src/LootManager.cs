@@ -15,9 +15,9 @@ namespace Lootations
     {
         private static readonly int MAX_SPAWNS = -1;
 
-        private static int LootTriggerCounter = 0;
-
+        public static int CurrentLevel = 0;
         public static Dictionary<GameObject, LootSpawnPoint> spawnedLoot = new();
+
         private static List<LootObject> LootObjects = new();
         private static List<LootSpawnPoint> LootSpawns = new();
         private static List<LootObjectRandomizer> ObjectSpawns = new List<LootObjectRandomizer>();
@@ -26,8 +26,9 @@ namespace Lootations
         // without screwing up the codebase
         private static Dictionary<ILootTrigger, int> LootTriggerIds = new();
         private static int spawnPointsActivated = 0;
+        private static int LootTriggerCounter = 0;
 
-        public static readonly Vector2 MAG_AMOUNT_RANGE = new Vector2(2, 4);
+        public static readonly Vector2 MAG_AMOUNT_RANGE = new Vector2(3, 3);
 
         public static readonly float Y_SPAWN_INCREMENT = 0.05f;
 
@@ -102,17 +103,50 @@ namespace Lootations
             return true;
         }
 
+        public static bool RemoveRandomObject(LootObjectRandomizer obj)
+        {
+            if (!ObjectSpawns.Contains(obj))
+            {
+                return false;
+            }
+            ObjectSpawns.Remove(obj);
+            return true;
+        }
+
         public static void OnPhysicalObjectPickup(GameObject obj)
         {
-            if (Lootations.h3mpEnabled && Networking.IsClient())
-            {
-                Networking.SendItemGrab(obj);
-            }
+            Networking.OnPhysicalObjectPickup(obj);
             if (spawnedLoot.ContainsKey(obj))
             {
                 Lootations.Logger.LogDebug("Removed object from tracked spawned loot pool.");
                 spawnedLoot[obj].StopTrackingObject(obj);
                 spawnedLoot.Remove(obj);
+
+                // Something in input code handles the changing of transform parent
+                // obj.transform.SetParent(transform);
+
+                foreach (FVRPhysicalObject physObj in obj.GetComponentsInChildren<FVRPhysicalObject>())
+                {
+                    // Picking up one specific smoke grenade errored out here, assuming it was this somehow
+                    if (physObj.RootRigidbody == null)
+                    {
+                        continue;
+                    }
+                    physObj.RootRigidbody.constraints = RigidbodyConstraints.FreezeAll;
+                    if (physObj.RootRigidbody.constraints == RigidbodyConstraints.FreezeAll)
+                    {
+                        physObj.RootRigidbody.constraints = RigidbodyConstraints.None;
+                    }
+                }
+            }
+        }
+
+        public static void OnGrabbityHandFlick(FVRPhysicalObject obj)
+        {
+            if (spawnedLoot.ContainsKey(obj.gameObject) && obj.RootRigidbody.constraints == RigidbodyConstraints.FreezeAll)
+            {
+                obj.RootRigidbody.constraints = RigidbodyConstraints.None;
+                obj.transform.parent = null;
             }
         }
 
@@ -161,7 +195,7 @@ namespace Lootations
             }
             if (spawnedLoot.ContainsKey(gameObj))
             {
-                Lootations.Logger.LogDebug("REMOVED IT!");
+                Lootations.Logger.LogDebug("Stopped tracking loot with id " + trackingId);
                 LootSpawnPoint point = spawnedLoot[gameObj];
                 point.StopTrackingObject(gameObj);
             }
@@ -175,31 +209,30 @@ namespace Lootations
 
         private static void OnSupplyPointChange()
         {
-            if (Lootations.h3mpEnabled && Networking.IsConnected())
+            if (SR_Manager.instance.gameCompleted)
             {
-                if (Networking.IsClient())
-                {
-                    // Await seed from host
-                    Lootations.Logger.LogDebug("Awaiting reroll of loot as client.");
-                    return;
-                }
-                else
-                {
-                    Lootations.Logger.LogDebug("Rolling loot as host.");
-                    int seed = Time.frameCount;
-                    RerollLoot(seed);
-                    Networking.SendRerollLoot(seed);
-                }
+                return;
+            }
+
+            CurrentLevel = SR_Manager.instance.CurrentCaptures;
+
+            if (Networking.IsClient())
+            {
+                // Await seed from host
+                Lootations.Logger.LogDebug("Awaiting reroll of loot as client.");
+                return;
             }
             else
             {
-                Lootations.Logger.LogDebug("Rolling loot as offline.");
-                RerollLoot();
+                Lootations.Logger.LogDebug("Rolling loot as host.");
+                int seed = Time.frameCount;
+                RerollLoot(seed);
             }
         }
 
         public static void OnTNHLevelSet(int level)
         {
+            CurrentLevel = level;
             // just needed something semi-random
             RerollLoot(Time.frameCount);
         }
@@ -216,13 +249,9 @@ namespace Lootations
             {
                 seed = Time.frameCount;
             }
-            int level = 0;
-            if (SR_Manager.instance.isActiveAndEnabled)
-            {
-                level = SR_Manager.instance.CurrentCaptures;
-            }
             Lootations.Logger.LogDebug("Respawning objects with seed: " + seed.ToString());
             Random.InitState(seed);
+            Networking.OnRerollLoot(seed);
 
             spawnPointsActivated = 0;
             ShuffleObjectRandomizers();
@@ -236,31 +265,44 @@ namespace Lootations
 
             // Reroll loot object.
             bool hitLimit = false;
-            for (int i = 0; i < ObjectSpawns.Count; i++)
+            List<LootObjectRandomizer> randomizers = [];
+            int j = 0;
+            while (ObjectSpawns.Count != 0)
             {
-                if (MAX_SPAWNS != -1 && i >= MAX_SPAWNS)
+                randomizers.AddRange(ObjectSpawns);
+                ObjectSpawns.Clear();
+                for (; j < randomizers.Count; j++)
                 {
-                    Lootations.Logger.LogDebug("Stopping respawn of loot objects, hit config limit of " + MAX_SPAWNS);
-                    hitLimit = true;
-                    break;
-                }
-                // TODO: MG dep
-                if (MG_Manager.instance.isActiveAndEnabled && MG_Manager.profile.srLootSpawns != 0 && i >= MG_Manager.profile.srLootSpawns)
-                {
-                    Lootations.Logger.LogDebug("Stopping respawn of loot objects, hit MG profile limit of " + MG_Manager.profile.srLootSpawns);
-                    hitLimit = true;
-                    break;
-                }
-                LootObjectRandomizer randomObject = ObjectSpawns[i];
-                randomObject.RollAndSpawn();
-                spawnPointsActivated++;
-            }
+                    if (MAX_SPAWNS != -1 && j >= MAX_SPAWNS)
+                    {
+                        Lootations.Logger.LogDebug("Stopping respawn of loot objects, hit config limit of " + MAX_SPAWNS);
+                        hitLimit = true;
+                        break;
+                    }
 
-            if (!hitLimit)
-            {
-                Lootations.Logger.LogDebug("No limit hit for ObjectRandomizer rerolls.");
+                    // TODO: MG dep
+                    if (MG_Manager.instance.isActiveAndEnabled && MG_Manager.profile.srLootSpawns != 0 && j >= MG_Manager.profile.srLootSpawns)
+                    {
+                        Lootations.Logger.LogDebug("Stopping respawn of loot objects, hit MG profile limit of " + MG_Manager.profile.srLootSpawns);
+                        hitLimit = true;
+                        break;
+                    }
+
+                    LootObjectRandomizer randomObject = randomizers[j];
+                    randomObject.RollAndSpawn();
+                    spawnPointsActivated++;
+                }
+
+                // Spawned objects with nested randomizers have now maybe been added.
+                // if so, repeat until nested randomizers resolve themselves
             }
-            Lootations.Logger.LogDebug("Spawned " + spawnPointsActivated.ToString() + " objects.");
+            ObjectSpawns = randomizers;
+
+            if (hitLimit)
+            {
+                Lootations.Logger.LogWarning("LootObject limit reached");
+            }
+            Lootations.Logger.LogInfo("Spawned " + spawnPointsActivated.ToString() + " objects.");
 
             for (int i = 0; i < LootObjects.Count; i++)
             {
@@ -268,12 +310,18 @@ namespace Lootations
                 trigger.Reset();
             }
 
+            int level = 0;
+            if (SR_Manager.instance != null && SR_Manager.instance.isActiveAndEnabled)
+            {
+                level = SR_Manager.instance.CurrentCaptures;
+            }
+
             // Set loot spawns to correct table.
-            for (int i = 0; i < LootSpawns.Count; i++)
+            // Wilnath (2024-12-29): Commented out due to trying to refactor to let tables decide their progressive tables instead of the unity object alone
+            /* for (int i = 0; i < LootSpawns.Count; i++)
             {
                 LootSpawnPoint lootable = LootSpawns[i];
-                lootable.SetLevel(level);
-            }
+            } */
         }
 
         public static Quaternion RandomRotation()

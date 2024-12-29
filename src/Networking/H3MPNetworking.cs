@@ -1,25 +1,29 @@
 ﻿using System;
-using UnityEngine;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using H3MP;
 using H3MP.Networking;
 using H3MP.Tracking;
-using System.Collections.Generic;
-using Valve.VR;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Lootations
 {
-    public static class Networking
+    public static class H3MPNetworking
     {
         private static readonly string ITEM_GRAB_STRING_ID = "Lootations_ItemGrab";
         private static readonly string REROLL_LOOT_STRING_ID = "Lootations_RerollLoot";
         private static readonly string TRIGGER_ACTIVATED_STRING_ID = "Lootations_TriggerActivated";
+        private static readonly string TRIGGER_DATA_STRING_ID = "Lootations_TriggerData";
 
         private static Dictionary<string, Mod.CustomPacketHandler> packetHandlers = new() {
             { ITEM_GRAB_STRING_ID, ReceiveItemGrab },
             { REROLL_LOOT_STRING_ID, ReceiveRerollLoot },
             { TRIGGER_ACTIVATED_STRING_ID, ReceiveTriggerActivated },
+            { TRIGGER_DATA_STRING_ID, ReceiveTriggerData },
         };
+
         private static Dictionary<string, int> packetIds = new();
 
         public static void OnSceneSwitched(Scene old_scene, Scene new_scene)
@@ -36,8 +40,6 @@ namespace Lootations
             SetupPacketTypes();
         }
 
-        // TODO: okay it's now less long but did you maybe try too hard to outsmart the system?
-        // maybe this is slow af?
         private static void SetupPacketTypes()
         {
             Lootations.Logger.LogDebug("Setting up packet types.");
@@ -64,6 +66,9 @@ namespace Lootations
                     {
                         packetIds[item.Key] = Server.RegisterCustomPacketType(item.Key);
                         Lootations.Logger.LogDebug("Handler registered as id " + packetIds[item.Key]);
+
+                        // Called in Server.RegisterCustomPacketType
+                        //ServerSend.RegisterCustomPacketType(item.Key, packetIds[item.Key]);
                     }
                     Mod.customPacketHandlers[packetIds[item.Key]] = item.Value;
                 }
@@ -81,7 +86,6 @@ namespace Lootations
 
                         // I mean this should be set at this point but SOMEHOW wasn't
                         Mod.customPacketHandlers[packetIds[item.Key]] = packetHandlers[item.Key];
-
                         Lootations.Logger.LogDebug("Handler already registered as id " + packetIds[item.Key]);
                     }
                     else
@@ -226,6 +230,59 @@ namespace Lootations
             }
             trigger.Trigger();
             // If host, trigger triggers and is then broadcasted to all
+        }
+
+
+        public static void SendTriggerDataUDP(ILootTrigger trigger, List<byte> bytes)
+        {
+            Packet packet = new Packet(packetIds[TRIGGER_DATA_STRING_ID]);
+            packet.Write(LootManager.GetLootTriggerId(trigger));
+            packet.buffer.AddRange(bytes);
+            if (IsClient())
+            {
+                ClientSend.SendUDPData(packet, true);
+            }
+            else
+            {
+                ServerSend.SendUDPDataToClients(packet, GetPlayerIds().ToList(), -1, true);
+            }
+        }
+
+        public static void SendTriggerDataTCP(ILootTrigger trigger, List<byte> bytes)
+        {
+            Packet packet = new Packet(packetIds[TRIGGER_DATA_STRING_ID]);
+            packet.Write(LootManager.GetLootTriggerId(trigger));
+            packet.buffer.AddRange(bytes);
+            if (IsClient())
+            {
+                ClientSend.SendTCPData(packet, true);
+            }
+            else
+            {
+                ServerSend.SendTCPDataToAll(packet, true);
+            }
+        }
+
+        public static void ReceiveTriggerData(int clientId, Packet packet)
+        {
+            int id = packet.ReadInt();
+            ILootTrigger trigger = LootManager.GetLootTriggerById(id);
+            if (trigger == null)
+            {
+                Lootations.Logger.LogWarning("Got packet for non-existant trigger with id: " + id.ToString());
+                return;
+            }
+            ITriggerDataReceiver dataReceiver = trigger as ITriggerDataReceiver;
+            if (dataReceiver != null)
+            {
+                // only send data portion of the packet
+                dataReceiver.ReceiveTriggerData(packet.buffer.GetRange(sizeof(int), packet.buffer.Count - sizeof(int)));
+            }
+            else
+            {
+                Lootations.Logger.LogWarning("Received trigger data for non data-receiver trigger with id: " + id.ToString());
+                return;
+            }
         }
     }
 }

@@ -7,8 +7,9 @@ namespace Lootations
 {
     public class LootObjectRandomizer : MonoBehaviour
     {
-        public GameObject[] Objects;
+        public GameObject[] Objects = new GameObject[0];
         public bool RandomizeRotation = false;
+        public Vector3 VisualizationSize = new Vector3(1, 1, 1);
 
         private GameObject spawnedObject;
 
@@ -64,7 +65,7 @@ namespace Lootations
         void OnDrawGizmos()
         {
             Gizmos.color = Color.green;
-            Gizmos.DrawCube(transform.position + new Vector3(0f, 0.5f, 0f), new Vector3(1, 1, 1));
+            Gizmos.DrawCube(transform.position + new Vector3(0f, VisualizationSize.y / 2, 0f), VisualizationSize);
         }
     }
 }

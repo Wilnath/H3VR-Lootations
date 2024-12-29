@@ -12,7 +12,9 @@ namespace Lootations
         public string Name { get; private set; }
         public string[] Meta { get; set; }
         public List<TableEntry> Entries { get; private set; } = new List<TableEntry>();
+
         public int TotalWeight { get; set; } = -1;
+        public MetaTags Tags;
 
         public LootTable(string name, TableEntry[] entries)
         {
@@ -28,8 +30,10 @@ namespace Lootations
             Entries.Add(entry);
         }
 
-        public List<string> RollObjectId()
+        public List<string> RollObjectId(ref MetaTags tags)
         {
+            MetaTags.UpdateTags(this, ref tags);
+
             if (TotalWeight == -1)
                 CalculateTotalWeight();
             if (TotalWeight == 0)
@@ -37,12 +41,26 @@ namespace Lootations
                 Lootations.Logger.LogError("Total weight calculated to be 0 in " + Name);
                 return [];
             }
+
+            if (tags.LevelSwitch)
+            {
+                int max = Entries.Count - 1;
+                int levelToRoll = Mathf.Clamp(LootManager.CurrentLevel, 0, max);
+                foreach (var entry in Entries)
+                {
+                    if (entry.Weight == levelToRoll)
+                    {
+                        return entry.RollObjectId(ref tags);
+                    }
+                }
+            }
+
             int currentWeight = UnityEngine.Random.Range(1, TotalWeight+1);
             foreach (var entry in Entries)
             {
                 if (currentWeight <= entry.Weight)
                 {
-                    return entry.RollObjectId();
+                    return entry.RollObjectId(ref tags);
                 }
                 currentWeight -= entry.Weight;
             }

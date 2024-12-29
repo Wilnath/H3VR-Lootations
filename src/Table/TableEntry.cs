@@ -31,14 +31,14 @@ namespace Lootations
             return new TableEntry { Weight = weight, LootIds = [ tableName ] , Type = TableType.TABLE_REFERENCE };
         }
 
-        public List<string> RollObjectId()
+        public List<string> RollObjectId(ref MetaTags tags)
         {
             switch (Type)
             {
                 case TableType.OBJECT_ID:
                     return LootIds;
                 case TableType.TABLE_REFERENCE:
-                    return TableManager.GetTable(LootIds[0]).RollObjectId();
+                    return TableManager.GetTable(LootIds[0]).RollObjectId(ref tags);
                 case TableType.TAGS:
                     // TODO:
                     return [];
@@ -76,6 +76,7 @@ namespace Lootations
             string tag = splitTag[0];
             string value = splitTag[1];
             List<string> newTable = new List<string>();
+            // TODO: this should be a feature, but just isn't rn
             if (!IsTagAndValueValid(tag, value))
             {
 

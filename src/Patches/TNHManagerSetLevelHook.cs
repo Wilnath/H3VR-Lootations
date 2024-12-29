@@ -12,8 +12,7 @@ namespace Lootations
     {
         public static void Postfix(int level)
         {
-            Lootations.Logger.LogDebug("TNH SetLevel hook fired");
-            LootManager.OnTNHLevelSet(level);
+            return;
         }
     }
 }

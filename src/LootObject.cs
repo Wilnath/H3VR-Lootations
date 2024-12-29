@@ -61,6 +61,23 @@ namespace Lootations
             LootManager.AddLootObject(this);
         }
 
+        public void EnsureOwnerOfSpawnedItems()
+        {
+            foreach (GameObject spawnPointObj in LootSpawnPoints)
+            {
+                LootSpawnPoint spawnPoint = spawnPointObj.GetComponent<LootSpawnPoint>();
+                if (spawnPoint == null)
+                {
+                    return;
+                }
+
+                foreach (GameObject spawnedItem in spawnPoint.SpawnedLoot)
+                {
+
+                }
+            }
+        }
+
         public void Trigger(ILootTrigger trigger)
         {
             if (Triggered)
