@@ -4,6 +4,7 @@ using BepInEx.Logging;
 using HarmonyLib;
 using BepInEx.Configuration;
 using UnityEngine.SceneManagement;
+using UnityEngine;
 
 namespace Lootations
 {
@@ -37,6 +38,7 @@ namespace Lootations
             if (h3mpEnabled)
             {
                 Logger.LogDebug("H3MP Detected as enabled");
+                SceneManager.activeSceneChanged += Networking.OnSceneSwitched;
             }
             else
             {
@@ -47,8 +49,15 @@ namespace Lootations
         private void OnSceneSwitched(Scene old_scene, Scene new_scene)
         {
             Logger.LogDebug("Scene switch occurred");
+
+            /*
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogStartDistance = 0f;
+            RenderSettings.fogEndDistance = 1f;
+            */
+
             LootManager.OnSceneSwitched();
-            SceneManager.activeSceneChanged += Networking.OnSceneSwitched;
         }
         
         // The line below allows access to your plugin's logger from anywhere in your code, including outside of this file.

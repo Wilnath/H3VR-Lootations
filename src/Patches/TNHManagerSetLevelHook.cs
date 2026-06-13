@@ -12,6 +12,7 @@ namespace Lootations
     {
         public static void Postfix(int level)
         {
+            // Not Implemented
             return;
         }
     }

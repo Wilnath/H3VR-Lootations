@@ -49,7 +49,14 @@ namespace Lootations
 
         public void Update()
         {
-            if (spawned || (Lootations.h3mpEnabled && Networking.IsClient()))
+            if (Lootations.h3mpEnabled && Networking.IsClient())
+            {
+                // host takes care of spawning
+                spawned = true;
+                return;
+            }
+
+            if (spawned)
             {
                 return;
             }
@@ -188,7 +195,10 @@ namespace Lootations
         {
             foreach (Sosig sosig in spawnedSosigs)
             {
-                sosig?.KillSosig();
+                if (sosig != null)
+                {
+                    Destroy(sosig);
+                }
             }
 
             spawnedSosigs.Clear();

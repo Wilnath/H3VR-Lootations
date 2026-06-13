@@ -1,6 +1,7 @@
 ﻿using FistVR;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Lootations
@@ -32,7 +33,9 @@ namespace Lootations
             base.BeginInteraction(hand);
             inputOffset = Vector3.zero;
             // ensure control of loot spawn points in a network
+            LootObject lootObject = LootObjectOwner.GetComponent<LootObject>();
             Trigger();
+            lootObject.EnsureOwnerOfSpawnedItems();
         }
 
         public void Trigger()
@@ -46,6 +49,10 @@ namespace Lootations
             Vector3 vec = Root.transform.InverseTransformPoint(hand.Input.Pos + inputOffset);
             float offset = Mathf.Clamp(vec.z, 0, MaxOffset);
             Hinge.transform.localPosition = new Vector3(0, 0, offset);
+            if (Networking.IsConnected())
+            {
+                Networking.SendTriggerDataUDP(this, BitConverter.GetBytes(offset).ToList());
+            }
         }
 
         public void LootReset()
@@ -67,8 +74,8 @@ namespace Lootations
 
         public void ReceiveTriggerData(List<byte> data)
         {
-            float angle = BitConverter.ToSingle(data.ToArray(), 0);
-            Hinge.transform.localPosition = new Vector3(0, 0, angle);
+            float offset = BitConverter.ToSingle(data.ToArray(), 0);
+            Hinge.transform.localPosition = new Vector3(0, 0, offset);
         }
     }
 }

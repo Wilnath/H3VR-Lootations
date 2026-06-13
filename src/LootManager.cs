@@ -159,6 +159,7 @@ namespace Lootations
             ObjectSpawns.Clear();
             LootTriggers.Clear();
             LootTriggerIds.Clear();
+            CurrentLevel = 0;
             LootTriggerCounter = 0;
         }
 

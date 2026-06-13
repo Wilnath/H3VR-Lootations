@@ -43,7 +43,7 @@ namespace Lootations
             return H3MPNetworking.IsHost();
         }
 
-        public static void OnSceneSwitched(Scene oldScene, Scene newScene)
+        public static void OnSceneSwitched(Scene _oldScene, Scene _newScene)
         {
             if (Lootations.h3mpEnabled)
             {
@@ -151,6 +151,41 @@ namespace Lootations
             {
                 H3MPNetworking.SendTriggerDataUDP(trigger, data);
             }
+        }
+
+        public const bool DEBUG_PRINT_PACKETS = true;
+        public static int PACKET_DUMP_NBR = 0;
+
+        public static void DebugPrintDataList(List<byte> data)
+        {
+            if (!DEBUG_PRINT_PACKETS)
+            {
+                return;
+            }
+            PACKET_DUMP_NBR += 1;
+            Lootations.Logger.LogDebug("STARTING PACKET DUMP #" + PACKET_DUMP_NBR);
+
+            string result = "";
+            foreach (byte d in data)
+            {
+                result += d;
+                result += ',';
+            }
+
+            Lootations.Logger.LogDebug(result);
+        }
+
+        public static void EnsureOwnerOfObjects(List<GameObject> objects)
+        {
+            if (IsConnected())
+            {
+                H3MPEnsureOwnerOfObjects(objects);
+            }
+        }
+
+        private static void H3MPEnsureOwnerOfObjects(List<GameObject> objects)
+        {
+            H3MPNetworking.EnsureOwnerOfObjects(objects);
         }
     }
 }

@@ -240,11 +240,13 @@ namespace Lootations
             packet.buffer.AddRange(bytes);
             if (IsClient())
             {
+                Networking.DebugPrintDataList(packet.buffer);
                 ClientSend.SendUDPData(packet, true);
             }
             else
             {
-                ServerSend.SendUDPDataToClients(packet, GetPlayerIds().ToList(), -1, true);
+                Lootations.Logger.LogDebug("Sending Trigger data as server");
+                ServerSend.SendUDPData(GetPlayerIds().ToList(), packet, 0, true);
             }
         }
 
@@ -265,23 +267,66 @@ namespace Lootations
 
         public static void ReceiveTriggerData(int clientId, Packet packet)
         {
-            int id = packet.ReadInt();
-            ILootTrigger trigger = LootManager.GetLootTriggerById(id);
+            // packetId
+            // already read to get here
+            // does set readpos ahead though
+            // _ = packet.ReadInt();
+
+            int triggerId = packet.ReadInt();
+            ILootTrigger trigger = LootManager.GetLootTriggerById(triggerId);
             if (trigger == null)
             {
-                Lootations.Logger.LogWarning("Got packet for non-existant trigger with id: " + id.ToString());
+                Lootations.Logger.LogWarning("Got packet for non-existant trigger with id: " + triggerId.ToString());
                 return;
             }
+
+            if (clientId != 0 && IsHost())
+            {
+                // untested, relay data to other clients
+                // why must this be rtt*2
+
+                // changes packet to something unreadable
+                // ServerSend.SendUDPData(GetPlayerIds().ToList(), packet, clientId, true);
+            }
+
             ITriggerDataReceiver dataReceiver = trigger as ITriggerDataReceiver;
+            List<byte> finalPacket = packet.buffer.GetRange(packet.readPos, packet.buffer.Count - packet.readPos);
+
             if (dataReceiver != null)
             {
                 // only send data portion of the packet
-                dataReceiver.ReceiveTriggerData(packet.buffer.GetRange(sizeof(int), packet.buffer.Count - sizeof(int)));
+                dataReceiver.ReceiveTriggerData(finalPacket);
             }
             else
             {
-                Lootations.Logger.LogWarning("Received trigger data for non data-receiver trigger with id: " + id.ToString());
+                Lootations.Logger.LogWarning("Received trigger data for non data-receiver trigger with id: " + triggerId.ToString());
                 return;
+            }
+        }
+
+        public static void EnsureOwnerOfObjects(List<GameObject> objects)
+        {
+            int id = GameManager.ID;
+            foreach (GameObject obj in objects)
+            {
+                TrackedObject trackedObj = obj.GetComponent<TrackedObject>();
+
+                if (trackedObj == null)
+                {
+                    continue;
+                }
+
+                if (trackedObj.data.controller != id)
+                {
+                    if (IsHost())
+                    {
+                        ServerSend.GiveObjectControl(trackedObj.data.trackedID, id, null);
+                    }
+                    else
+                    {
+                        ClientSend.GiveObjectControl(trackedObj.data.trackedID, id, null);
+                    }
+                }
             }
         }
     }

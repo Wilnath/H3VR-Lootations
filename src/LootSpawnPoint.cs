@@ -132,7 +132,7 @@ namespace Lootations
             }
         }
 
-        public GameObject ConstructAmmoBox(FVRFireArmRound baseRound, MetaTags tags)
+        public GameObject ConstructAmmoBox(FVRFireArmRound baseRound)
         {
             Lootations.Logger.LogDebug("Constructing ammo box.");
 
@@ -152,9 +152,8 @@ namespace Lootations
             }
 
             LootTable table = TableManager.GetTable(TableName);
-            if (table == null)
+            if (table == TableManager.NullTable)
             {
-                Lootations.Logger.LogError("Spawn point tried getting non-existant table " + TableName);
                 yield break;
             }
 
@@ -198,7 +197,6 @@ namespace Lootations
                         var magCallback = mag.GetGameObjectAsync();
                         yield return magCallback;
 
-                        // TODO: Add mag + weapon spawn specific locations like guncases
                         GameObject spawnedMagObj = SpawnItem(magCallback.Result, true);
                         yield return null;
                     }
@@ -207,17 +205,16 @@ namespace Lootations
                 var callback = obj.GetGameObjectAsync();
                 yield return callback;
 
-                var roundComponent = callback.Result.GetComponent<FVRFireArmRound>();
                 GameObject spawnedObj;
+                var roundComponent = callback.Result.GetComponent<FVRFireArmRound>();
                 if (tags.CartridgesAsAmmoBoxes && roundComponent != null)
                 {
-                    spawnedObj = SpawnItem(ConstructAmmoBox(roundComponent, tags), false, true);
+                    spawnedObj = SpawnItem(ConstructAmmoBox(roundComponent), false, true);
                 }
                 else
                 {
                     spawnedObj = SpawnItem(callback.Result);
                 }
-
 
                 HasSpawnedLoot = true;
                 tags.MagLoadRange.Apply(spawnedObj);
@@ -228,8 +225,6 @@ namespace Lootations
         private static readonly float RAYCAST_DISTANCE = 2f;
         private GameObject SpawnItem(GameObject obj, bool randomOffset = false, bool alreadySpawnedObj = false)
         {
-            // Leaving out most of the function commented, incomplete feature
-
             Bounds bounds = new Bounds(obj.transform.GetChild(0).transform.position, Vector3.zero);
             LayerMask mask = LayerMask.NameToLayer("Default");
 
@@ -252,6 +247,7 @@ namespace Lootations
                     bounds.Encapsulate(rend.bounds);
                 }
             }
+
             /*foreach (var coll in obj.GetComponentsInChildren<Collider>())
             {
                 if (coll.gameObject.layer == mask)
@@ -307,10 +303,10 @@ namespace Lootations
             }
 
 
-            // FIXME: do this for children too
             if (LockPhysicsOnSpawn)
             {
                 spawnedObj.transform.SetParent(transform);
+                // breaks grenades and does not fix the thing shotguns do lmao
                 foreach (FVRPhysicalObject physObj in spawnedObj.GetComponentsInChildren<FVRPhysicalObject>())
                 {
                     physObj.RootRigidbody.constraints = RigidbodyConstraints.FreezeAll;

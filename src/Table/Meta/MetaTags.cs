@@ -23,7 +23,7 @@ namespace Lootations
                 }
             },
             {
-                "OneShotLevelSwitch", (string s, ref MetaTags tags) =>
+                "LevelSwitch", (string s, ref MetaTags tags) =>
                 {
                     tags.LevelSwitch = s.ToLower() == "true";
                 }
@@ -32,13 +32,6 @@ namespace Lootations
                 "MagLoadRange", MagLoadRangeTag.GetMetaTagParser()
             }
         };
-
-        public static MetaTags ParseTableTags(LootTable table)
-        {
-            MetaTags result = new();
-            UpdateTags(table, ref result);
-            return result;
-        }
 
         private static void ResetOneShotTags(ref MetaTags tags)
         {
@@ -72,9 +65,9 @@ namespace Lootations
         }
 
         // For when a zero weight entry isn't invalid, like in a level switch
-        public bool IsZeroWeightEntriesInvalid()
+        public bool IsZeroWeightEntriesValid()
         {
-            return !LevelSwitch;
+            return LevelSwitch;
         }
 
         public List<IValidator> Validators = new();

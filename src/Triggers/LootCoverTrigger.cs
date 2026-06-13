@@ -84,7 +84,6 @@ namespace Lootations
         public void ReceiveTriggerData(List<byte> data)
         {
             float angle = BitConverter.ToSingle(data.ToArray(), 0);
-            Lootations.Logger.LogDebug("LIGMA called with data " + data.ToString() + " converted " + (angle));
             Hinge.transform.localEulerAngles = new Vector3(0, 0, angle);
         }
     }

@@ -1,4 +1,7 @@
 ﻿using FistVR;
+using H3MP;
+using H3MP.Networking;
+using H3MP.Tracking;
 using SupplyRaid;
 using System;
 using System.Collections.Generic;
@@ -63,19 +66,12 @@ namespace Lootations
 
         public void EnsureOwnerOfSpawnedItems()
         {
-            foreach (GameObject spawnPointObj in LootSpawnPoints)
+            List<GameObject> spawnedItems = new List<GameObject>();
+            foreach (LootSpawnPoint point in spawnPoints)
             {
-                LootSpawnPoint spawnPoint = spawnPointObj.GetComponent<LootSpawnPoint>();
-                if (spawnPoint == null)
-                {
-                    return;
-                }
-
-                foreach (GameObject spawnedItem in spawnPoint.SpawnedLoot)
-                {
-
-                }
+                spawnedItems.AddRange(point.SpawnedLoot);
             }
+            Networking.EnsureOwnerOfObjects(spawnedItems);
         }
 
         public void Trigger(ILootTrigger trigger)

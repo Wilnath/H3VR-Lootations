@@ -12,7 +12,7 @@ namespace Lootations
     public static class TableManager
     {
         private static Dictionary<string, LootTable> _lootTables;
-        private readonly static LootTable NullTable = new LootTable("NONE", [ TableEntry.ObjectEntry("NONE", 1) ]);
+        public readonly static LootTable NullTable = new LootTable("NONE", [ TableEntry.ObjectEntry("NONE", 1) ]);
 
         public static void Initialize()
         {
@@ -23,6 +23,7 @@ namespace Lootations
             {
                 ProcessFile(lootTableFile);
             }
+
             ValidateAllTables();
         }
 
@@ -49,7 +50,7 @@ namespace Lootations
             MetaTags tags = new MetaTags();
             MetaTags.UpdateTags(table, ref tags);
 
-            if (!tags.IsZeroWeightEntriesInvalid())
+            if (tags.IsZeroWeightEntriesValid())
             {
                 return;
             }
@@ -59,6 +60,7 @@ namespace Lootations
                 var item = table.Entries[i];
                 if (item.Weight == 0)
                 {
+                    Lootations.Logger.LogDebug("Removing 0 weight entry from table " + table.Name);
                     table.Entries.RemoveAt(i);
                     i--;
                 }
@@ -73,6 +75,7 @@ namespace Lootations
                 {
                     continue;
                 }
+
                 var ids = table.Entries[i].LootIds;
                 for (int j = 0; j < ids.Count; j++)
                 {
@@ -87,10 +90,13 @@ namespace Lootations
                         Lootations.Logger.LogDebug("Unknown object id " + item1 + " in table " + table.Name);
                     }
                 }
+
                 if (ids.Count == 0)
                 {
                     table.Entries.RemoveAt(i);
                     table.CalculateTotalWeight();
+                    Lootations.Logger.LogDebug("Removing entry with no object IDs in table " + table.Name);
+                    Lootations.Logger.LogDebug("(If this table is intended to have nothing, add a 1 weight entry to drop 'NONE')");
                     i--;
                 }
             }
@@ -123,8 +129,8 @@ namespace Lootations
 
         public static void AddLootTable(LootTable table)
         {
-            table.Tags = MetaTags.ParseTableTags(table);
-            MetaTags tags = table.Tags;
+            MetaTags tags = new MetaTags();
+            MetaTags.UpdateTags(table, ref tags);
             foreach (IValidator validator in tags.Validators)
             {
                 if (!validator.IsValid())
@@ -143,15 +149,6 @@ namespace Lootations
                     existingTable.Entries.Add(entry);
                 }
                 return;
-            }
-            for (int i = 0; i < table.Entries.Count; i++)
-            {
-                TableEntry entry = table.Entries[i];
-                if (entry.Weight == 0)
-                {
-                    table.Entries.Remove(entry);
-                    i--;
-                }
             }
             _lootTables.Add(table.Name, table);
         }

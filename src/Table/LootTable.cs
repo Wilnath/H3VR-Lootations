@@ -14,7 +14,6 @@ namespace Lootations
         public List<TableEntry> Entries { get; private set; } = new List<TableEntry>();
 
         public int TotalWeight { get; set; } = -1;
-        public MetaTags Tags;
 
         public LootTable(string name, TableEntry[] entries)
         {
@@ -34,18 +33,12 @@ namespace Lootations
         {
             MetaTags.UpdateTags(this, ref tags);
 
-            if (TotalWeight == -1)
-                CalculateTotalWeight();
-            if (TotalWeight == 0)
-            {
-                Lootations.Logger.LogError("Total weight calculated to be 0 in " + Name);
-                return [];
-            }
-
             if (tags.LevelSwitch)
             {
+                Lootations.Logger.LogDebug("Loot manager says current level is " + LootManager.CurrentLevel);
                 int max = Entries.Count - 1;
                 int levelToRoll = Mathf.Clamp(LootManager.CurrentLevel, 0, max);
+                Lootations.Logger.LogDebug("Level to be rolled as " + levelToRoll);
                 foreach (var entry in Entries)
                 {
                     if (entry.Weight == levelToRoll)
@@ -53,6 +46,16 @@ namespace Lootations
                         return entry.RollObjectId(ref tags);
                     }
                 }
+                Lootations.Logger.LogError("Undefined Level Switch on current level " + levelToRoll + " in table " + Name);
+                return [];
+            }
+
+            if (TotalWeight == -1)
+                CalculateTotalWeight();
+            if (TotalWeight == 0)
+            {
+                Lootations.Logger.LogError("Total weight calculated to be 0 in " + Name);
+                return [];
             }
 
             int currentWeight = UnityEngine.Random.Range(1, TotalWeight+1);
